@@ -75,7 +75,7 @@ Sudo time!:
 
 Write the image to the sdcard and mount the partition:
 
-    xz -dc ubuntu-16.04-preinstalled-server-armhf+raspi3.img.xz | dd of=$SDCARD_DRIVE
+    xz -dc ubuntu-16.04-preinstalled-server-armhf+raspi3.img.xz | dd status=progress of=$SDCARD_DRIVE
     umount ${SDCARD_DRIVE}2 2> /dev/null    # dismount if automount kicks in!
     mount ${SDCARD_DRIVE}2 /mnt
 
