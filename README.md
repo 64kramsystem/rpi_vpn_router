@@ -102,12 +102,16 @@ Write the configuration files:
     # Finished!
     eject $SDCARD_DRIVE
 
-Now, insert the SD card in the RPi, turn it on and execute!:
+Now, insert the SD card in the RPi, turn it on, and logon.  
+The system will start an autoupdate; it can be checked using
 
-    # If this fails with `Could not get lock /var/lib/dpkg/lock`, then it's because the automatic upgrade kicked in;
-    # will need to wait until it's completed.
-    apt update
+    watch -n 1 'pgrep -a dpkg'
+
+Attempts to update the apt cache and/or to install any package will result in `Could not get lock /var/lib/dpkg/lock`.
+
+Once the update is completed, install openvpn and reboot:
+
     apt install -y openvpn
-    systemctl start openvpn-pia
+    reboot
 
 Enjoy the RPI3 VPN router!
