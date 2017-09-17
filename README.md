@@ -65,7 +65,12 @@ Prepare data:
     mkdir $ROUTER_SETUP_PATH && cd $ROUTER_SETUP_PATH
     
     wget https://www.finnie.org/software/raspberrypi/ubuntu-rpi3/ubuntu-16.04-preinstalled-server-armhf+raspi3.img.xz
+    
+    # Clone the repo, and alter the permissions - git won't restore them.
     git clone git@github.com:saveriomiroddi/rpi_vpn_router.git
+    find rpi_vpn_router/* -type d -exec chmod 755 {} \;
+    find rpi_vpn_router/* -type f -name '*.sh' -exec chmod 755 {} \;
+    find rpi_vpn_router/* -type f -not -name '*.sh' -exec chmod 644 {} \;
 
 Sudo time!:
 
