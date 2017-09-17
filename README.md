@@ -52,7 +52,7 @@ Preparation:
 
 Fill with relevant data:
 
-    export ROUTER_SETUP_PATH=$HOME/rpi_router_setup         # RPi image and setup files will be downloaded here
+    export ROUTER_SETUP_PATH=$HOME/rpi_vpn_router_setup     # RPi image and setup files will be downloaded here
     export SDCARD_DRIVE=/dev/sdX                            # path of the sdcard device. BE VERY CAREFUL!!
     export MODEM_SIDE_RPI_IP=192.168.X.Y                    # RPi IP address on the side of the modem/router; eth0 on the RPi
     export ACCESS_POINT_SIDE_RPI_IP=192.168.Z.1             # RPi IP address on the side of the Wifi access point; eth1 (USB network adapter) on the RPi

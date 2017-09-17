@@ -9,4 +9,4 @@ PATH=/usr/bin:/usr/sbin:/sbin:/bin:/usr/local/bin
 # |     |     |     |     |                   (once every x: */x, from x to y: x-y, a list: x, y, z)
 # v     v     v     v     v     user   command to be executed
 
-  *     *     *     *     *     root   /var/lib/rpi_router/restart_vpn_if_no_internet.sh
+  *     *     *     *     *     root   /var/lib/rpi_vpn_router/restart_vpn_if_no_internet.sh

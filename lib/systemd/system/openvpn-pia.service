@@ -5,7 +5,7 @@ After=network.target
 
 [Service]
 Type=forking
-ExecStart=/usr/sbin/openvpn --daemon --status /run/openvpn/openvpn-pia.status 10 --config /etc/openvpn/pia/default.ovpn --script-security 2 --up /var/lib/rpi_router/on_vpn_up.sh --down /var/lib/rpi_router/on_vpn_down.sh
+ExecStart=/usr/sbin/openvpn --daemon --status /run/openvpn/openvpn-pia.status 10 --config /etc/openvpn/pia/default.ovpn --script-security 2 --up /var/lib/rpi_vpn_router/on_vpn_up.sh --down /var/lib/rpi_vpn_router/on_vpn_down.sh
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=20
