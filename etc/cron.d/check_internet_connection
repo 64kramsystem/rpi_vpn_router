@@ -1,0 +1,12 @@
+SHELL=/bin/bash
+PATH=/usr/bin:/usr/sbin:/sbin:/bin:/usr/local/bin
+
+# .---------------------------- minute:       0 - 59 | every n minutes: */n | each minute from x to y: x-y
+# |     .---------------------- hour:         0 - 23
+# |     |     .---------------- day of month: 1 - 31
+# |     |     |     .---------- month:        1 - 12 | jan,feb, ...
+# |     |     |     |     .---- day of week:  0 - 7 (Sunday: 0 or 7) | sun, mon, tue, wed, thu, fri, sat
+# |     |     |     |     |                   (once every x: */x, from x to y: x-y, a list: x, y, z)
+# v     v     v     v     v     user   command to be executed
+
+  *     *     *     *     *     root   /var/lib/rpi_router/restart_vpn_if_no_internet.sh
