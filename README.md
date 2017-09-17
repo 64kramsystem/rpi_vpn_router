@@ -98,7 +98,10 @@ Write the configuration files:
     perl -i -pe "s/__MODEM_IP__/$MODEM_IP/" /mnt/etc/network/interfaces
     perl -i -pe "s/__ACCESS_POINT_SIDE_RPI_IP__/$ACCESS_POINT_SIDE_RPI_IP/" /mnt/etc/network/interfaces
     
-
+    # Disable the automatic update, due to a critical bug (see https://bugs.launchpad.net/ubuntu-pi-flavour-maker/+bug/1697637)
+    #
+    perl -i -pe 's/"1"/"0"/' /mnt/etc/apt/apt.conf.d/20auto-upgrades
+    
     # Finished!
     eject $SDCARD_DRIVE
 
