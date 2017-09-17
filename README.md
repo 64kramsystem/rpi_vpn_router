@@ -13,7 +13,7 @@ There are existing routers preconfigured with this functionality (WRT/Tomato), b
 - they're very weak for the VPN (or for any software in generale); I doubt they're powerful enough to handle 20+ MBit/sec of traffic;
 - they're not as easy to configure, or to install programs onto.
 
-You can trivially install for example, in addition to the VPN service, a local file hosting service, an FTP server, or anything else.
+On a Raspberry Pi, you can trivially install for example, in addition to the VPN service, a local file hosting service, an FTP server, or many other services.
 
 ### Requirements
 
@@ -26,7 +26,7 @@ The hardware requirements are:
 
 The software requirements are:
 
-- a PrivateInternetAccess account
+- a PrivateInternetAccess account (or any other VPN provider, although in this case, additional configuration may be required)
 
 The procedure can be trivially adapted for any RPi and any VPN provider.
 
@@ -54,8 +54,8 @@ Fill with relevant data:
 
     export ROUTER_SETUP_PATH=$HOME/rpi_vpn_router_setup     # RPi image and setup files will be downloaded here
     export SDCARD_DRIVE=/dev/sdX                            # path of the sdcard device. BE VERY CAREFUL!!
-    export MODEM_SIDE_RPI_IP=192.168.X.Y                    # RPi IP address on the side of the modem/router; eth0 on the RPi
-    export ACCESS_POINT_SIDE_RPI_IP=192.168.Z.1             # RPi IP address on the side of the Wifi access point; eth1 (USB network adapter) on the RPi
+    export MODEM_NET_RPI_IP=192.168.X.Y                     # RPi IP in the modem/router network (eth0 on the RPi)
+    export ACCESS_POINT_NET_RPI_IP=192.168.Z.1              # RPi IP in the Wifi access point ethernet network (eth1 (USB network adapter) on the RPi)
     export PIA_USER=foo
     export PIA_PASSWORD=bar
     export PIA_SERVER=baz.privateinternetaccess.com         # list here: https://www.privateinternetaccess.com/pages/network
@@ -93,12 +93,13 @@ Write the configuration files:
     [[ ! $(grep ubuntu /mnt/etc/hosts) ]] && echo '127.0.0.1 ubuntu' >> /mnt/etc/hosts
     
     # Setup the networking
-    export MODEM_IP=$(perl -pe 's/\.\d+$/.1/' <<< $MODEM_SIDE_RPI_IP)
-    perl -i -pe "s/__MODEM_SIDE_RPI_IP__/$MODEM_SIDE_RPI_IP/" /mnt/etc/network/interfaces
+    export MODEM_IP=$(perl -pe 's/\.\d+$/.1/' <<< $MODEM_NET_RPI_IP)
+    perl -i -pe "s/__MODEM_NET_RPI_IP__/$MODEM_NET_RPI_IP/" /mnt/etc/network/interfaces
     perl -i -pe "s/__MODEM_IP__/$MODEM_IP/" /mnt/etc/network/interfaces
-    perl -i -pe "s/__ACCESS_POINT_SIDE_RPI_IP__/$ACCESS_POINT_SIDE_RPI_IP/" /mnt/etc/network/interfaces
+    perl -i -pe "s/__ACCESS_POINT_NET_RPI_IP__/$ACCESS_POINT_NET_RPI_IP/" /mnt/etc/network/interfaces
     
-    # Disable the automatic update, due to a critical bug (see https://bugs.launchpad.net/ubuntu-pi-flavour-maker/+bug/1697637)
+    # Disable the automatic update, due to a critical bug in the distro.
+    # See https://bugs.launchpad.net/ubuntu-pi-flavour-maker/+bug/1697637
     #
     perl -i -pe 's/"1"/"0"/' /mnt/etc/apt/apt.conf.d/20auto-upgrades
     
@@ -106,13 +107,7 @@ Write the configuration files:
     eject $SDCARD_DRIVE
 
 Now, insert the SD card in the RPi, turn it on, and logon.  
-The system will start an autoupdate; it can be checked using
-
-    watch -n 1 'pgrep -a dpkg'
-
-Attempts to update the apt cache and/or to install any package will result in `Could not get lock /var/lib/dpkg/lock`.
-
-Once the update is completed, install openvpn and reboot:
+Update the apt index (but don't perform any upgrade!), install openvpn and reboot:
 
     apt install -y openvpn
     reboot

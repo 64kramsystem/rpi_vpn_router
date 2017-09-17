@@ -8,12 +8,12 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
-  address __MODEM_SIDE_RPI_IP__
+  address __MODEM_NET_RPI_IP__
   gateway __MODEM_IP__
   netmask 255.255.255.0
   dns-nameservers __MODEM_IP__
 
 auto eth1
 iface eth1 inet static
-  address __ACCESS_POINT_SIDE_RPI_IP__
+  address __ACCESS_POINT_NET_RPI_IP__
   netmask 255.255.255.0
