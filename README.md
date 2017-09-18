@@ -48,17 +48,17 @@ Preparation:
 - take note of the modem/router subnet
 - plug the Ethernet dongle to the RPi
 - connect the Wifi access point to the Ethernet dongle
-- configure the access point Ethernet-side connection (subnet/ip/gateway), using an ip that does *not* end with `.1` (that will be the RPi)
 
 Fill with relevant data:
 
     export ROUTER_SETUP_PATH=$HOME/rpi_vpn_router_setup     # RPi image and setup files will be downloaded here
     export SDCARD_DRIVE=/dev/sdX                            # path of the sdcard device. BE VERY CAREFUL!!
     export MODEM_NET_RPI_IP=192.168.X.Y                     # RPi IP in the modem/router network (eth0 on the RPi)
-    export ACCESS_POINT_NET_RPI_IP=192.168.Z.1              # RPi IP in the Wifi access point ethernet network (eth1 (USB network adapter) on the RPi)
     export PIA_USER=foo
     export PIA_PASSWORD=bar
     export PIA_SERVER=baz.privateinternetaccess.com         # list here: https://www.privateinternetaccess.com/pages/network
+    export PIA_DNS_SERVER_1=209.222.18.222                  # find here: https://www.privateinternetaccess.com/pages/client-support/#tenth
+    export PIA_DNS_SERVER_1=209.222.18.218                  # ^^
 
 Prepare data:
 
@@ -101,7 +101,8 @@ Write the configuration files:
     export MODEM_IP=$(perl -pe 's/\.\d+$/.1/' <<< $MODEM_NET_RPI_IP)
     perl -i -pe "s/__MODEM_NET_RPI_IP__/$MODEM_NET_RPI_IP/" /mnt/etc/network/interfaces
     perl -i -pe "s/__MODEM_IP__/$MODEM_IP/" /mnt/etc/network/interfaces
-    perl -i -pe "s/__ACCESS_POINT_NET_RPI_IP__/$ACCESS_POINT_NET_RPI_IP/" /mnt/etc/network/interfaces
+    perl -i -pe "s/__PIA_DNS_SERVER_1__/$PIA_DNS_SERVER_1/" /mnt/etc/dnsmasq.d/eth1-access-point-net.conf
+    perl -i -pe "s/__PIA_DNS_SERVER_2__/$PIA_DNS_SERVER_2/" /mnt/etc/dnsmasq.d/eth1-access-point-net.conf
     
     # Disable the automatic update, due to a critical bug in the distro.
     # See https://bugs.launchpad.net/ubuntu-pi-flavour-maker/+bug/1697637
@@ -112,10 +113,10 @@ Write the configuration files:
     eject $SDCARD_DRIVE
 
 Now, insert the SD card in the RPi, turn it on, and logon.  
-Install openvpn, enable the service and reboot:
+Install openvpn/dnsmasq, enable openvpn and reboot:
 
     apt update
-    apt install -y openvpn
+    apt install -y openvpn dnsmasq
     systemctl enable openvpn-pia
     reboot
 

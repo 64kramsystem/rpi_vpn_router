@@ -15,5 +15,5 @@ iface eth0 inet static
 
 auto eth1
 iface eth1 inet static
-  address __ACCESS_POINT_NET_RPI_IP__
+  address 192.168.166.1
   netmask 255.255.255.0
