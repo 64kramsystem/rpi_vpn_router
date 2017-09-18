@@ -112,9 +112,11 @@ Write the configuration files:
     eject $SDCARD_DRIVE
 
 Now, insert the SD card in the RPi, turn it on, and logon.  
-Update the apt index (but don't perform any upgrade!), install openvpn and reboot:
+Install openvpn, enable the service and reboot:
 
+    apt update
     apt install -y openvpn
+    systemctl enable openvpn-pia
     reboot
 
 Enjoy the RPI3 VPN router!
