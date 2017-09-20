@@ -47,7 +47,7 @@ I will elaborate on this subject further in the future.
 - take note of the ISP modem/router subnet (you'll need to log into the admin interface)
 - prepare the card by running the script:
 
-    curl https://raw.githubusercontent.com/saveriomiroddi/rpi_vpn_router/master/install_vpn_router.sh | sudo bash -
+    `curl https://raw.githubusercontent.com/saveriomiroddi/rpi_vpn_router/master/install_vpn_router.sh | sudo bash -`
 
 - follow the instructions
 - connect the ISP modem/router to the RPi internal ethernet port
