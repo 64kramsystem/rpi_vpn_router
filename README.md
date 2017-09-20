@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is the first release of the procedure for setting up a Raspberri Pi (3) as VPN router
+This is the first release of a script for setting up a Raspberri Pi (3) as VPN router, using the RPi Ubuntu.
 
 This setup will yield a wireless network connected to Internet through the configured VPN; if the VPN connection falls for any reason, the internet connection will be unavailable until the VPN will be up again ("kill switch").
 
@@ -10,10 +10,10 @@ There are use cases where using a RPi as VPN router is very useful, for example,
 
 There are existing routers preconfigured with this functionality (WRT/Tomato), but:
 
-- they're very weak for the VPN (or for any software in generale); I doubt they're powerful enough to handle 20+ MBit/sec of traffic;
-- they're not as easy to configure, or to install programs onto.
+- they have very limited hardware (CPU/RAM/disk) - I doubt they're powerful enough to handle 20+ MBit/sec of traffic
+- they're not as easy to configure, use, and they has much less software available, compared to Ubuntu
 
-On a Raspberry Pi, you can trivially install for example, in addition to the VPN service, a local file hosting service, an FTP server, or many other services.
+On an Ubuntu-based Raspberry Pi, you can trivially install for example, a local file hosting service, an FTP server, a backup server, or many other services, with great ease and availability of information.
 
 ### Requirements
 
@@ -34,90 +34,26 @@ I don't have any relation to PrivateInternetAccess, except that it's been the mo
 
 ### Note on using RPi[s] as Wifi Access Point/Route
 
-This is **not** a guide for setting up the RPi as Wifi access point+router.
+This is **not** a guide for setting up the RPi as Wifi access point+router (for example, using an USB Wifi dongle, or the RPi3 built-in Wifi chip).
 
-I have a significant experience (at least 5 different setups) with RPi in AP+router setup, and both the RPi integrated Wifi chip and USB Wifi dongles in general, are simply not cut for working as access point.
+I have experience on several hardware setups (at least 5) with RPi in AP+router setup, and both the RPi integrated Wifi chip and USB Wifi dongles in general, are simply not cut for working as access point.
+
+For reference, almost all the "it works!" configurations published on the internet, are written by people who didn't bother testing them for more than a few minutes. I did use those setups for weeks, and my current configuration is permanent.
 
 I will elaborate on this subject further in the future.
 
 ## Execution
 
-Preparation:
+- take note of the ISP modem/router subnet (you'll need to log into the admin interface)
+- prepare the card by running the script:
 
+    curl https://raw.githubusercontent.com/saveriomiroddi/rpi_vpn_router/master/install_vpn_router.sh | sudo bash -
+
+- follow the instructions
 - connect the ISP modem/router to the RPi internal ethernet port
-- take note of the modem/router subnet
-- plug the Ethernet dongle to the RPi
+- plug the Ethernet dongle in the RPi
+- insert the card in the RPi and boot it
+- log in the RPi and execute the additional instructions
 - connect the Wifi access point to the Ethernet dongle
-
-Fill with relevant data:
-
-    export ROUTER_SETUP_PATH=$HOME/rpi_vpn_router_setup     # RPi image and setup files will be downloaded here
-    export SDCARD_DRIVE=/dev/sdX                            # path of the sdcard device. BE VERY CAREFUL!!
-    export MODEM_NET_RPI_IP=192.168.X.Y                     # RPi IP in the modem/router network (eth0 on the RPi)
-    export PIA_USER=foo
-    export PIA_PASSWORD=bar
-    export PIA_SERVER=baz.privateinternetaccess.com         # list here: https://www.privateinternetaccess.com/pages/network
-    export PIA_DNS_SERVER_1=209.222.18.222                  # find here: https://www.privateinternetaccess.com/pages/client-support/#tenth
-    export PIA_DNS_SERVER_1=209.222.18.218                  # ^^
-
-Prepare data:
-
-    mkdir $ROUTER_SETUP_PATH && cd $ROUTER_SETUP_PATH
-    
-    wget https://www.finnie.org/software/raspberrypi/ubuntu-rpi3/ubuntu-16.04-preinstalled-server-armhf+raspi3.img.xz
-    
-    # Clone the repo, and alter the permissions - git won't restore them.
-    git clone git@github.com:saveriomiroddi/rpi_vpn_router.git
-    find rpi_vpn_router/* -type d -exec chmod 755 {} \;
-    find rpi_vpn_router/* -type f -name '*.sh' -exec chmod 755 {} \;
-    find rpi_vpn_router/* -type f -not -name '*.sh' -exec chmod 644 {} \;
-
-Sudo time!:
-
-    # Paranoid users can pass all the variables instead of using `-E`, although the
-    # operations executed as sudo are trivial.
-    sudo -E su
-
-Write the image to the sdcard and mount the partition:
-
-    xz -dc ubuntu-16.04-preinstalled-server-armhf+raspi3.img.xz | dd status=progress of=$SDCARD_DRIVE
-    umount ${SDCARD_DRIVE}2 2> /dev/null    # dismount if automount kicks in!
-    mount ${SDCARD_DRIVE}2 /mnt
-
-Write the configuration files:
-
-    # Copy the configuration files
-    rsync --recursive --links --perms --exclude=.git --exclude=README.md --exclude=install_vpn_router.sh $ROUTER_SETUP_PATH/rpi_vpn_router/ /mnt
-    
-    # Setup the PIA configuration
-    perl -i -pe "s/__PIA_USER__/$PIA_USER/" /mnt/etc/openvpn/pia/auth.conf
-    perl -i -pe "s/__PIA_PASSWORD__/$PIA_PASSWORD/" /mnt/etc/openvpn/pia/auth.conf
-    perl -i -pe "s/__PIA_SERVER_ADDRESS__/$PIA_SERVER/" /mnt/etc/openvpn/pia/default.ovpn
-    
-    # Fix the hosts file - the localhost name is currently missing from the image.
-    [[ ! $(grep ubuntu /mnt/etc/hosts) ]] && echo '127.0.0.1 ubuntu' >> /mnt/etc/hosts
-    
-    # Setup the networking
-    export MODEM_IP=$(perl -pe 's/\.\d+$/.1/' <<< $MODEM_NET_RPI_IP)
-    perl -i -pe "s/__MODEM_NET_RPI_IP__/$MODEM_NET_RPI_IP/" /mnt/etc/network/interfaces
-    perl -i -pe "s/__MODEM_IP__/$MODEM_IP/" /mnt/etc/network/interfaces
-    perl -i -pe "s/__PIA_DNS_SERVER_1__/$PIA_DNS_SERVER_1/" /mnt/etc/dnsmasq.d/eth1-access-point-net.conf
-    perl -i -pe "s/__PIA_DNS_SERVER_2__/$PIA_DNS_SERVER_2/" /mnt/etc/dnsmasq.d/eth1-access-point-net.conf
-    
-    # Disable the automatic update, due to a critical bug in the distro.
-    # See https://bugs.launchpad.net/ubuntu-pi-flavour-maker/+bug/1697637
-    #
-    perl -i -pe 's/"1"/"0"/' /mnt/etc/apt/apt.conf.d/20auto-upgrades
-    
-    # Finished!
-    eject $SDCARD_DRIVE
-
-Now, insert the SD card in the RPi, turn it on, and logon.  
-Install openvpn/dnsmasq, enable openvpn and reboot:
-
-    apt update
-    apt install -y openvpn dnsmasq
-    systemctl enable openvpn-pia
-    reboot
 
 Enjoy the RPI3 VPN router!
