@@ -87,7 +87,7 @@ Write the image to the sdcard and mount the partition:
 Write the configuration files:
 
     # Copy the configuration files
-    rsync --recursive --links --perms --exclude=.git --exclude=README.md $ROUTER_SETUP_PATH/rpi_vpn_router/ /mnt
+    rsync --recursive --links --perms --exclude=.git --exclude=README.md --exclude=install_vpn_router.sh $ROUTER_SETUP_PATH/rpi_vpn_router/ /mnt
     
     # Setup the PIA configuration
     perl -i -pe "s/__PIA_USER__/$PIA_USER/" /mnt/etc/openvpn/pia/auth.conf
