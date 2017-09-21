@@ -219,7 +219,7 @@ Insert it in the RPi, then execute:
 
     sudo apt update
     sudo apt install -y openvpn dnsmasq
-    sudo systemctl enable openvpn-pia
+    sudo systemctl enable vpn-router
     sudo reboot
 
 Enjoy your RPI3 VPN router!
