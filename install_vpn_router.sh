@@ -38,6 +38,13 @@ function find_usb_storage_devices {
 
 # MAIN FUNCTIONS ###############################################################
 
+function check_sudo {
+  if [[ "$EUID" != 0 ]]; then
+    whiptail --msgbox "Please re-run this script as root!" 30 100
+    exit
+  fi
+}
+
 function print_intro {
   whiptail --msgbox "Hello! This script will prepare an SDCard for using un a RPi3 as VPN router." 30 100
 }
@@ -255,6 +262,8 @@ Enjoy your RPI3 VPN router!
 }
 
 # MAIN #########################################################################
+
+check_sudo
 
 print_intro
 ask_temp_path
