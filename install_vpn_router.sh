@@ -53,28 +53,31 @@ If left blank, `/tmp` will be used.' 30 100 3>&1 1>&2 2>&3)
 }
 
 function ask_sdcard_device {
-  declare -A v_usb_storage_devices
+  while [[ "$v_sdcard_device" == "" ]]; do
+    declare -A v_usb_storage_devices
 
-  while [[ "$v_sdcard_device" == "" || ${v_usb_storage_devices[$v_sdcard_device]} == "" ]]; do
     find_usb_storage_devices
 
-    local message=$'Enter the SDCard device (eg. `/dev/sdc`). THE DEVICE WILL BE COMPLETELY ERASED.\n\n'
-
     if [[ ${#v_usb_storage_devices[@]} > 0 ]]; then
-      message+=$'Available (USB) devices:\n\n'
+      local entries_option=""
+      local entries_count=0
+      local message=$'Choose SDCard device. THE CARD/DEVICE WILL BE COMPLETELY ERASED.\n\nAvailable (USB) devices:\n\n'
 
       for dev in "${!v_usb_storage_devices[@]}"; do
-        message+="$dev -> ${v_usb_storage_devices[$dev]}
-"
+        entries_option+=" $dev "
+        entries_option+=$(printf "%q" ${v_usb_storage_devices[$dev]})
+        entries_option+=" OFF"
+
+        let entries_count+=1
       done
+
+      v_sdcard_device=$(whiptail --radiolist "$message" 30 100 $entries_count $entries_option 3>&1 1>&2 2>&3);
     else
-      message+="No (USB) devices found. Plug one and press Enter."
+      whiptail --msgbox "No (USB) devices found. Plug one and press Enter." 30 100
     fi
 
-    v_sdcard_device=$(whiptail --inputbox "$message" 30 100 3>&1 1>&2 2>&3);
+    unset v_usb_storage_devices
   done
-
-  unset v_usb_storage_devices
 }
 
 function ask_rpi_static_ip_on_modem_net {
