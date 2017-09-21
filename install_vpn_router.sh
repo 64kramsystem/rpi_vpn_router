@@ -26,7 +26,7 @@ v_local_image_filename=
 
 function find_usb_storage_devices {
   for device in /sys/block/*; do
-    usb_storages_info=$(udevadm info --query=property --path=$device)
+    local usb_storages_info=$(udevadm info --query=property --path=$device)
 
     if echo "$usb_storages_info" | grep -q ^ID_BUS=usb; then
       devname=$(echo "$usb_storages_info" | grep ^DEVNAME= | perl -pe 's/DEVNAME=//')
@@ -39,13 +39,13 @@ function find_usb_storage_devices {
 # MAIN FUNCTIONS ###############################################################
 
 function print_intro {
-  whiptail --title "Intro" --msgbox "Hello! This script will prepare an SDCard for using un a RPi3 as VPN router." 30 100
+  whiptail --msgbox "Hello! This script will prepare an SDCard for using un a RPi3 as VPN router." 30 100
 }
 
-# TODO: add space check
 function ask_temp_path {
   v_temp_path=$(whiptail --inputbox 'Enter the temporary directory (requires about 255 MiB of free space).
-If left blank, `/tmp` will be used.' 30 100 3>&1 1>&2 2>&3)
+
+Leave blank for using the default (`/tmp`).' 30 100 3>&1 1>&2 2>&3)
 
   if [[ "$v_temp_path" == "" ]]; then
     v_temp_path="/tmp"
@@ -88,7 +88,8 @@ function ask_rpi_static_ip_on_modem_net {
 
 function ask_rpi_hostname {
   v_rpi_hostname=$(whiptail --inputbox $'Enter the RPi hostname.
-If left blank, it will be set to `raspberrypi3`' 30 100 3>&1 1>&2 2>&3)
+
+Leave blank for using `raspberrypi3`' 30 100 3>&1 1>&2 2>&3)
 
   if [[ "$v_rpi_hostname" == "" ]]; then
     v_rpi_hostname=raspberrypi3
@@ -106,18 +107,21 @@ function ask_pia_data {
 
   while [[ "$v_pia_server" == "" ]]; do
     v_pia_server=$(whiptail --inputbox 'Enter the PrivateInternetAccess server (eg. germany.privateinternetaccess.com).
+
 You can find the list at https://www.privateinternetaccess.com/pages/network' 30 100 3>&1 1>&2 2>&3)
   done
 
   v_pia_dns_server_1=$(whiptail --inputbox 'Enter the PrivateInternetAccess DNS server 1 IP.
-If left blank, the default PIA DNS 1 will be set (209.222.18.222)' 30 100 3>&1 1>&2 2>&3)
+
+Leave blank for using the default PIA DNS Server #1 (209.222.18.222)' 30 100 3>&1 1>&2 2>&3)
 
   if [[ "$v_pia_dns_server_1" == "" ]]; then
     v_pia_dns_server_1="209.222.18.222"
   fi
 
   v_pia_dns_server_2=$(whiptail --inputbox 'Enter the PrivateInternetAccess DNS server 2 IP.
-If left blank, the default PIA DNS 2 will be set (209.222.18.218)' 30 100 3>&1 1>&2 2>&3)
+
+Leave blank for using the default PIA DNS Server #2 (209.222.18.218)' 30 100 3>&1 1>&2 2>&3)
 
   if [[ "$v_pia_dns_server_2" == "" ]]; then
     v_pia_dns_server_2="209.222.18.218"
@@ -227,7 +231,7 @@ function eject_sdcard {
 }
 
 function print_first_boot_instructions {
-  whiptail --title "Intro" --msgbox "The SD card is ready.
+  whiptail --msgbox "The SD card is ready.
 
 Insert it in the RPi, then execute:
 
