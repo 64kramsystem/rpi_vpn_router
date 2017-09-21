@@ -14,6 +14,7 @@ c_data_dir_mountpoint=/mnt
 v_temp_path=
 v_sdcard_device=
 v_rpi_static_ip_on_modem_net=
+v_rpi_hostname=
 v_pia_user=
 v_pia_password=
 v_pia_server=
@@ -80,6 +81,15 @@ function ask_rpi_static_ip_on_modem_net {
   while [[ ! $v_rpi_static_ip_on_modem_net =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; do
     v_rpi_static_ip_on_modem_net=$(whiptail --inputbox $'Enter the RPi static IP on the modem network (eth0 on the RPi)' 30 100 3>&1 1>&2 2>&3)
   done
+}
+
+function ask_rpi_hostname {
+  v_rpi_hostname=$(whiptail --inputbox $'Enter the RPi hostname.
+If left blank, it will be set to `raspberrypi3`' 30 100 3>&1 1>&2 2>&3)
+
+  if [[ "$v_rpi_hostname" == "" ]]; then
+    v_rpi_hostname=raspberrypi3
+  fi
 }
 
 function ask_pia_data {
@@ -193,7 +203,8 @@ function update_configuration_files {
   perl -i -pe "s/__PIA_SERVER_ADDRESS__/$v_pia_server/" "$c_data_dir_mountpoint/etc/openvpn/pia/default.ovpn"
 
   # Fix the hosts file - the localhost name is currently missing from the image.
-  [[ ! $(grep ubuntu "$c_data_dir_mountpoint/etc/hosts") ]] && echo '127.0.0.1 ubuntu' >> "$c_data_dir_mountpoint/etc/hosts"
+  echo "127.0.0.1 $v_rpi_hostname" >> "$c_data_dir_mountpoint/etc/hosts"
+  echo "$v_rpi_hostname" > "$c_data_dir_mountpoint/etc/hostname"
 
   # Setup the networking
   local modem_ip=$(perl -pe 's/\.\d+$/.1/' <<< "$v_rpi_static_ip_on_modem_net")
@@ -232,6 +243,7 @@ print_intro
 ask_temp_path
 ask_sdcard_device
 ask_rpi_static_ip_on_modem_net
+ask_rpi_hostname
 ask_pia_data
 
 download_and_process_required_data
