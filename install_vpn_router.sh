@@ -151,10 +151,14 @@ function unmount_sdcard_partitions {
 }
 
 function burn_image {
-  local image_filename="$v_temp_path/${c_ubuntu_image_address##*/}"
-  local file_size=$(stat -c "%s" $image_filename)
+  # dd doesn't print newlines, so we need to detect the progress change events
+  # using carriage return as separator
+  #
+  local uncompressed_image_size=$(xz --robot --list "$v_local_image_filename" | tail -n 1 | awk '{print $5}' )
 
-  (cat "$image_filename" | pv -n -s "$file_size" | xzcat > "$v_sdcard_device") 2>&1 | whiptail --gauge "Burning the image on the SD card..." 30 100 0
+  (xzcat "$v_local_image_filename" | dd status=progress of="$v_sdcard_device") 2>&1 | \
+    stdbuf -o0 awk -v RS='\r' "/copied/ { printf(\"%0.f\n\", \$1 / $uncompressed_image_size * 100) }" | \
+    whiptail --gauge "Burning the image on the SD card..." 30 100 0
 }
 
 function mount_data_partition {
