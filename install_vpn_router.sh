@@ -111,21 +111,31 @@ function ask_pia_data {
 You can find the list at https://www.privateinternetaccess.com/pages/network' 30 100 3>&1 1>&2 2>&3)
   done
 
-  v_pia_dns_server_1=$(whiptail --inputbox 'Enter the PrivateInternetAccess DNS server 1 IP.
+  while true; do
+    v_pia_dns_server_1=$(whiptail --inputbox 'Enter the PrivateInternetAccess DNS server 1 IP.
 
 Leave blank for using the default PIA DNS Server #1 (209.222.18.222)' 30 100 3>&1 1>&2 2>&3)
 
-  if [[ "$v_pia_dns_server_1" == "" ]]; then
-    v_pia_dns_server_1="209.222.18.222"
-  fi
+    if [[ $v_pia_dns_server_1 =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+      break
+    elif [[ "$v_pia_dns_server_1" == "" ]]; then
+      v_pia_dns_server_1="209.222.18.222";
+      break
+    fi
+  done
 
-  v_pia_dns_server_2=$(whiptail --inputbox 'Enter the PrivateInternetAccess DNS server 2 IP.
+  while true; do
+    v_pia_dns_server_2=$(whiptail --inputbox 'Enter the PrivateInternetAccess DNS server 2 IP.
 
 Leave blank for using the default PIA DNS Server #2 (209.222.18.218)' 30 100 3>&1 1>&2 2>&3)
 
-  if [[ "$v_pia_dns_server_2" == "" ]]; then
-    v_pia_dns_server_2="209.222.18.218"
-  fi
+    if [[ $v_pia_dns_server_2 =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+      break
+    elif [[ "$v_pia_dns_server_2" == "" ]]; then
+      v_pia_dns_server_2="209.222.18.218"
+      break
+    fi
+  done
 }
 
 function download_and_process_required_data {
