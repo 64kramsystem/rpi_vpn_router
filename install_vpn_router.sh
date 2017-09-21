@@ -2,6 +2,10 @@
 
 set -o errexit
 
+# GENERAL NOTES ################################################################
+
+# Temporary files/subdirs are deleted immediately after usage.
+
 # VARIABLES/CONSTANTS ##########################################################
 
 c_project_repository_link=https://github.com/saveriomiroddi/rpi_vpn_router.git
@@ -193,6 +197,8 @@ function burn_image {
   (xzcat "$v_local_image_filename" | dd status=progress of="$v_sdcard_device") 2>&1 | \
     stdbuf -o0 awk -v RS='\r' "/copied/ { printf(\"%0.f\n\", \$1 / $uncompressed_image_size * 100) }" | \
     whiptail --gauge "Burning the image on the SD card..." 30 100 0
+
+  rm "$v_local_image_filename"
 }
 
 function mount_data_partition {
@@ -218,6 +224,8 @@ function copy_configuration_files {
   rsync --recursive --links --perms \
     --exclude=.git --exclude=README.md --exclude=install_vpn_router.sh \
     "$v_temp_path/vpn_router/" "$c_data_dir_mountpoint"
+
+  rm -rf "$v_temp_path/vpn_router"
 }
 
 function update_configuration_files {
