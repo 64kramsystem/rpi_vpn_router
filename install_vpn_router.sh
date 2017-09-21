@@ -2,6 +2,10 @@
 
 set -o errexit
 
+# GENERAL NOTES ################################################################
+
+# Temporary files/subdirs are deleted immediately after usage.
+
 # VARIABLES/CONSTANTS ##########################################################
 
 c_project_repository_link=https://github.com/saveriomiroddi/rpi_vpn_router.git
@@ -14,6 +18,7 @@ c_data_dir_mountpoint=/mnt
 v_temp_path=
 v_sdcard_device=
 v_rpi_static_ip_on_modem_net=
+v_rpi_hostname=
 v_pia_user=
 v_pia_password=
 v_pia_server=
@@ -25,7 +30,7 @@ v_local_image_filename=
 
 function find_usb_storage_devices {
   for device in /sys/block/*; do
-    usb_storages_info=$(udevadm info --query=property --path=$device)
+    local usb_storages_info=$(udevadm info --query=property --path=$device)
 
     if echo "$usb_storages_info" | grep -q ^ID_BUS=usb; then
       devname=$(echo "$usb_storages_info" | grep ^DEVNAME= | perl -pe 's/DEVNAME=//')
@@ -37,14 +42,21 @@ function find_usb_storage_devices {
 
 # MAIN FUNCTIONS ###############################################################
 
-function print_intro {
-  whiptail --title "Intro" --msgbox "Hello! This script will prepare an SDCard for using un a RPi3 as VPN router." 30 100
+function check_sudo {
+  if [[ "$EUID" != 0 ]]; then
+    whiptail --msgbox "Please re-run this script as root!" 30 100
+    exit
+  fi
 }
 
-# TODO: add space check
+function print_intro {
+  whiptail --msgbox "Hello! This script will prepare an SDCard for using un a RPi3 as VPN router." 30 100
+}
+
 function ask_temp_path {
   v_temp_path=$(whiptail --inputbox 'Enter the temporary directory (requires about 255 MiB of free space).
-If left blank, `/tmp` will be used.' 30 100 3>&1 1>&2 2>&3)
+
+Leave blank for using the default (`/tmp`).' 30 100 3>&1 1>&2 2>&3)
 
   if [[ "$v_temp_path" == "" ]]; then
     v_temp_path="/tmp"
@@ -52,34 +64,47 @@ If left blank, `/tmp` will be used.' 30 100 3>&1 1>&2 2>&3)
 }
 
 function ask_sdcard_device {
-  declare -A v_usb_storage_devices
+  while [[ "$v_sdcard_device" == "" ]]; do
+    declare -A v_usb_storage_devices
 
-  while [[ "$v_sdcard_device" == "" || ${v_usb_storage_devices[$v_sdcard_device]} == "" ]]; do
     find_usb_storage_devices
 
-    local message=$'Enter the SDCard device (eg. `/dev/sdc`). THE DEVICE WILL BE COMPLETELY ERASED.\n\n'
-
     if [[ ${#v_usb_storage_devices[@]} > 0 ]]; then
-      message+=$'Available (USB) devices:\n\n'
+      local entries_option=""
+      local entries_count=0
+      local message=$'Choose SDCard device. THE CARD/DEVICE WILL BE COMPLETELY ERASED.\n\nAvailable (USB) devices:\n\n'
 
       for dev in "${!v_usb_storage_devices[@]}"; do
-        message+="$dev -> ${v_usb_storage_devices[$dev]}
-"
+        entries_option+=" $dev "
+        entries_option+=$(printf "%q" ${v_usb_storage_devices[$dev]})
+        entries_option+=" OFF"
+
+        let entries_count+=1
       done
+
+      v_sdcard_device=$(whiptail --radiolist "$message" 30 100 $entries_count $entries_option 3>&1 1>&2 2>&3);
     else
-      message+="No (USB) devices found. Plug one and press Enter."
+      whiptail --msgbox "No (USB) devices found. Plug one and press Enter." 30 100
     fi
 
-    v_sdcard_device=$(whiptail --inputbox "$message" 30 100 3>&1 1>&2 2>&3);
+    unset v_usb_storage_devices
   done
-
-  unset v_usb_storage_devices
 }
 
 function ask_rpi_static_ip_on_modem_net {
   while [[ ! $v_rpi_static_ip_on_modem_net =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; do
     v_rpi_static_ip_on_modem_net=$(whiptail --inputbox $'Enter the RPi static IP on the modem network (eth0 on the RPi)' 30 100 3>&1 1>&2 2>&3)
   done
+}
+
+function ask_rpi_hostname {
+  v_rpi_hostname=$(whiptail --inputbox $'Enter the RPi hostname.
+
+Leave blank for using `raspberrypi3`' 30 100 3>&1 1>&2 2>&3)
+
+  if [[ "$v_rpi_hostname" == "" ]]; then
+    v_rpi_hostname=raspberrypi3
+  fi
 }
 
 function ask_pia_data {
@@ -93,22 +118,35 @@ function ask_pia_data {
 
   while [[ "$v_pia_server" == "" ]]; do
     v_pia_server=$(whiptail --inputbox 'Enter the PrivateInternetAccess server (eg. germany.privateinternetaccess.com).
+
 You can find the list at https://www.privateinternetaccess.com/pages/network' 30 100 3>&1 1>&2 2>&3)
   done
 
-  v_pia_dns_server_1=$(whiptail --inputbox 'Enter the PrivateInternetAccess DNS server 1 IP.
-If left blank, the default PIA DNS 1 will be set (209.222.18.222)' 30 100 3>&1 1>&2 2>&3)
+  while true; do
+    v_pia_dns_server_1=$(whiptail --inputbox 'Enter the PrivateInternetAccess DNS server 1 IP.
 
-  if [[ "$v_pia_dns_server_1" == "" ]]; then
-    v_pia_dns_server_1="209.222.18.222"
-  fi
+Leave blank for using the default PIA DNS Server #1 (209.222.18.222)' 30 100 3>&1 1>&2 2>&3)
 
-  v_pia_dns_server_2=$(whiptail --inputbox 'Enter the PrivateInternetAccess DNS server 2 IP.
-If left blank, the default PIA DNS 2 will be set (209.222.18.218)' 30 100 3>&1 1>&2 2>&3)
+    if [[ $v_pia_dns_server_1 =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+      break
+    elif [[ "$v_pia_dns_server_1" == "" ]]; then
+      v_pia_dns_server_1="209.222.18.222";
+      break
+    fi
+  done
 
-  if [[ "$v_pia_dns_server_2" == "" ]]; then
-    v_pia_dns_server_2="209.222.18.218"
-  fi
+  while true; do
+    v_pia_dns_server_2=$(whiptail --inputbox 'Enter the PrivateInternetAccess DNS server 2 IP.
+
+Leave blank for using the default PIA DNS Server #2 (209.222.18.218)' 30 100 3>&1 1>&2 2>&3)
+
+    if [[ $v_pia_dns_server_2 =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+      break
+    elif [[ "$v_pia_dns_server_2" == "" ]]; then
+      v_pia_dns_server_2="209.222.18.218"
+      break
+    fi
+  done
 }
 
 function download_and_process_required_data {
@@ -118,13 +156,13 @@ function download_and_process_required_data {
    stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' | \
    whiptail --gauge "Downloading Ubuntu image..." 30 100 0
 
-  rm -rf "$v_temp_path/rpi_vpn_router"
+  rm -rf "$v_temp_path/vpn_router"
 
-  git clone "$c_project_repository_link" "$v_temp_path/rpi_vpn_router"
+  git clone "$c_project_repository_link" "$v_temp_path/vpn_router"
 
-  find "$v_temp_path/rpi_vpn_router"/* -type d -exec chmod 755 {} \;
-  find "$v_temp_path/rpi_vpn_router"/* -type f -name '*.sh' -exec chmod 755 {} \;
-  find "$v_temp_path/rpi_vpn_router"/* -type f -not -name '*.sh' -exec chmod 644 {} \;
+  find "$v_temp_path/vpn_router"/* -type d -exec chmod 755 {} \;
+  find "$v_temp_path/vpn_router"/* -type f -name '*.sh' -exec chmod 755 {} \;
+  find "$v_temp_path/vpn_router"/* -type f -not -name '*.sh' -exec chmod 644 {} \;
 }
 
 function unmount_sdcard_partitions {
@@ -151,10 +189,16 @@ function unmount_sdcard_partitions {
 }
 
 function burn_image {
-  local image_filename="$v_temp_path/${c_ubuntu_image_address##*/}"
-  local file_size=$(stat -c "%s" $image_filename)
+  # dd doesn't print newlines, so we need to detect the progress change events
+  # using carriage return as separator
+  #
+  local uncompressed_image_size=$(xz --robot --list "$v_local_image_filename" | tail -n 1 | awk '{print $5}' )
 
-  (cat "$image_filename" | pv -n -s "$file_size" | xzcat > "$v_sdcard_device") 2>&1 | whiptail --gauge "Burning the image on the SD card..." 30 100 0
+  (xzcat "$v_local_image_filename" | dd status=progress of="$v_sdcard_device") 2>&1 | \
+    stdbuf -o0 awk -v RS='\r' "/copied/ { printf(\"%0.f\n\", \$1 / $uncompressed_image_size * 100) }" | \
+    whiptail --gauge "Burning the image on the SD card..." 30 100 0
+
+  rm "$v_local_image_filename"
 }
 
 function mount_data_partition {
@@ -179,7 +223,9 @@ function mount_data_partition {
 function copy_configuration_files {
   rsync --recursive --links --perms \
     --exclude=.git --exclude=README.md --exclude=install_vpn_router.sh \
-    "$v_temp_path/rpi_vpn_router/" "$c_data_dir_mountpoint"
+    "$v_temp_path/vpn_router/" "$c_data_dir_mountpoint"
+
+  rm -rf "$v_temp_path/vpn_router"
 }
 
 function update_configuration_files {
@@ -189,7 +235,8 @@ function update_configuration_files {
   perl -i -pe "s/__PIA_SERVER_ADDRESS__/$v_pia_server/" "$c_data_dir_mountpoint/etc/openvpn/pia/default.ovpn"
 
   # Fix the hosts file - the localhost name is currently missing from the image.
-  [[ ! $(grep ubuntu "$c_data_dir_mountpoint/etc/hosts") ]] && echo '127.0.0.1 ubuntu' >> "$c_data_dir_mountpoint/etc/hosts"
+  echo "127.0.0.1 $v_rpi_hostname" >> "$c_data_dir_mountpoint/etc/hosts"
+  echo "$v_rpi_hostname" > "$c_data_dir_mountpoint/etc/hostname"
 
   # Setup the networking
   local modem_ip=$(perl -pe 's/\.\d+$/.1/' <<< "$v_rpi_static_ip_on_modem_net")
@@ -209,13 +256,13 @@ function eject_sdcard {
 }
 
 function print_first_boot_instructions {
-  whiptail --title "Intro" --msgbox "The SD card is ready.
+  whiptail --msgbox "The SD card is ready.
 
 Insert it in the RPi, then execute:
 
     sudo apt update
     sudo apt install -y openvpn dnsmasq
-    sudo systemctl enable openvpn-pia
+    sudo systemctl enable vpn-router
     sudo reboot
 
 Enjoy your RPI3 VPN router!
@@ -224,10 +271,13 @@ Enjoy your RPI3 VPN router!
 
 # MAIN #########################################################################
 
+check_sudo
+
 print_intro
 ask_temp_path
 ask_sdcard_device
 ask_rpi_static_ip_on_modem_net
+ask_rpi_hostname
 ask_pia_data
 
 download_and_process_required_data
