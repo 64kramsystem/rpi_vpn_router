@@ -118,13 +118,13 @@ function download_and_process_required_data {
    stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' | \
    whiptail --gauge "Downloading Ubuntu image..." 30 100 0
 
-  rm -rf "$v_temp_path/rpi_vpn_router"
+  rm -rf "$v_temp_path/vpn_router"
 
-  git clone "$c_project_repository_link" "$v_temp_path/rpi_vpn_router"
+  git clone "$c_project_repository_link" "$v_temp_path/vpn_router"
 
-  find "$v_temp_path/rpi_vpn_router"/* -type d -exec chmod 755 {} \;
-  find "$v_temp_path/rpi_vpn_router"/* -type f -name '*.sh' -exec chmod 755 {} \;
-  find "$v_temp_path/rpi_vpn_router"/* -type f -not -name '*.sh' -exec chmod 644 {} \;
+  find "$v_temp_path/vpn_router"/* -type d -exec chmod 755 {} \;
+  find "$v_temp_path/vpn_router"/* -type f -name '*.sh' -exec chmod 755 {} \;
+  find "$v_temp_path/vpn_router"/* -type f -not -name '*.sh' -exec chmod 644 {} \;
 }
 
 function unmount_sdcard_partitions {
@@ -183,7 +183,7 @@ function mount_data_partition {
 function copy_configuration_files {
   rsync --recursive --links --perms \
     --exclude=.git --exclude=README.md --exclude=install_vpn_router.sh \
-    "$v_temp_path/rpi_vpn_router/" "$c_data_dir_mountpoint"
+    "$v_temp_path/vpn_router/" "$c_data_dir_mountpoint"
 }
 
 function update_configuration_files {
