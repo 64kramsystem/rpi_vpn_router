@@ -92,8 +92,16 @@ function ask_sdcard_device {
 }
 
 function ask_rpi_static_ip_on_modem_net {
-  while [[ ! $v_rpi_static_ip_on_modem_net =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; do
-    v_rpi_static_ip_on_modem_net=$(whiptail --inputbox $'Enter the RPi static IP on the modem network (eth0 on the RPi)' 30 100 3>&1 1>&2 2>&3)
+  while true; do
+    v_rpi_static_ip_on_modem_net=$(whiptail --inputbox $'Enter the RPi static IP on the modem network (eth0 on the RPi)
+
+Leave blank for automatic assignment (use DHCP).' 30 100 3>&1 1>&2 2>&3)
+
+    if [[ $v_rpi_static_ip_on_modem_net =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+      break
+    elif [[ "$v_rpi_static_ip_on_modem_net" == "" ]]; then
+      break
+    fi
   done
 }
 
@@ -238,10 +246,17 @@ function update_configuration_files {
   echo "127.0.0.1 $v_rpi_hostname" >> "$c_data_dir_mountpoint/etc/hosts"
   echo "$v_rpi_hostname" > "$c_data_dir_mountpoint/etc/hostname"
 
-  # Setup the networking
-  local modem_ip=$(perl -pe 's/\.\d+$/.1/' <<< "$v_rpi_static_ip_on_modem_net")
-  perl -i -pe "s/__MODEM_NET_RPI_IP__/$v_rpi_static_ip_on_modem_net/" "$c_data_dir_mountpoint/etc/network/interfaces"
-  perl -i -pe "s/__MODEM_IP__/$modem_ip/" "$c_data_dir_mountpoint/etc/network/interfaces"
+  if [[ "$v_rpi_static_ip_on_modem_net" == "" ]]; then
+    # Remove the eth0 section - rely on `/etc/network/interfaces.d/50-cloud.conf`, which
+    # sets `eth0` as auto (DHCP).
+    perl -0777 -i -pe 's/^auto eth0.*__MODEM_IP__\n\n//sm' "$c_data_dir_mountpoint/etc/network/interfaces"
+  else
+    # Otherwise set a static ip.
+    local modem_ip=$(perl -pe 's/\.\d+$/.1/' <<< "$v_rpi_static_ip_on_modem_net")
+    perl -i -pe "s/__MODEM_NET_RPI_IP__/$v_rpi_static_ip_on_modem_net/" "$c_data_dir_mountpoint/etc/network/interfaces"
+    perl -i -pe "s/__MODEM_IP__/$modem_ip/" "$c_data_dir_mountpoint/etc/network/interfaces"
+  fi
+
   perl -i -pe "s/__PIA_DNS_SERVER_1__/$v_pia_dns_server_1/" "$c_data_dir_mountpoint/etc/dnsmasq.d/eth1-access-point-net.conf"
   perl -i -pe "s/__PIA_DNS_SERVER_2__/$v_pia_dns_server_2/" "$c_data_dir_mountpoint/etc/dnsmasq.d/eth1-access-point-net.conf"
 
