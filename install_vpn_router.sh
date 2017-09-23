@@ -8,7 +8,7 @@ set -o errexit
 
 # VARIABLES/CONSTANTS ##########################################################
 
-c_project_repository_link=https://github.com/saveriomiroddi/rpi_vpn_router.git
+c_project_archive_address=https://github.com/saveriomiroddi/rpi_vpn_router/archive/master.zip
 c_ubuntu_image_address=https://www.finnie.org/software/raspberrypi/ubuntu-rpi3/ubuntu-16.04-preinstalled-server-armhf+raspi3.img.xz
 c_data_dir_mountpoint=/mnt
 
@@ -164,13 +164,21 @@ function download_and_process_required_data {
    stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' | \
    whiptail --gauge "Downloading Ubuntu image..." 30 100 0
 
-  rm -rf "$v_temp_path/vpn_router"
+  v_local_archive_filename="$v_temp_path/${c_project_archive_address##*/}"
 
-  git clone "$c_project_repository_link" "$v_temp_path/vpn_router"
+  wget -cO "$v_local_archive_filename" "$c_project_archive_address" 2>&1 | \
+   stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' | \
+   whiptail --gauge "Downloading project archive..." 30 100 0
 
-  find "$v_temp_path/vpn_router"/* -type d -exec chmod 755 {} \;
-  find "$v_temp_path/vpn_router"/* -type f -name '*.sh' -exec chmod 755 {} \;
-  find "$v_temp_path/vpn_router"/* -type f -not -name '*.sh' -exec chmod 644 {} \;
+  rm -rf "$v_temp_path/rpi_vpn_router-master"
+
+  unzip "$v_local_archive_filename" -d "$v_temp_path" -x "*/README.md" "*/install_vpn_router.sh"
+
+  rm "$v_local_archive_filename"
+
+  find "$v_temp_path/rpi_vpn_router-master"/* -type d -exec chmod 755 {} \;
+  find "$v_temp_path/rpi_vpn_router-master"/* -type f -name '*.sh' -exec chmod 755 {} \;
+  find "$v_temp_path/rpi_vpn_router-master"/* -type f -not -name '*.sh' -exec chmod 644 {} \;
 }
 
 function unmount_sdcard_partitions {
@@ -229,11 +237,10 @@ function mount_data_partition {
 }
 
 function copy_configuration_files {
-  rsync --recursive --links --perms \
-    --exclude=.git --exclude=README.md --exclude=install_vpn_router.sh \
-    "$v_temp_path/vpn_router/" "$c_data_dir_mountpoint"
+  # Files to ignore are not present, as they aren't extracted from the archive.
+  rsync --recursive --links --perms "$v_temp_path/rpi_vpn_router-master/" "$c_data_dir_mountpoint"
 
-  rm -rf "$v_temp_path/vpn_router"
+  rm -rf "$v_temp_path/rpi_vpn_router-master"
 }
 
 function update_configuration_files {
