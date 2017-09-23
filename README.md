@@ -32,7 +32,7 @@ The procedure can be trivially adapted for any RPi and any VPN provider.
 
 I don't have any relation to PrivateInternetAccess, except that it's been the most reliable of all the VPN providers I've used. Of course, YMMV.
 
-### Note on using RPi[s] as Wifi Access Point/Route
+### Note on using RPi[s] as Wifi Access Point/Router
 
 This is **not** a guide for setting up the RPi as Wifi access point+router (for example, using an USB Wifi dongle, or the RPi3 built-in Wifi chip).
 
@@ -44,15 +44,14 @@ I will elaborate on this subject further in the future.
 
 ## Execution
 
-- take note of the ISP modem/router subnet (you'll need to log into the admin interface)
-- prepare the card by running the script:
+Simple configuration:
+
+- prepare the card by downloading and executing the script:
 
     `curl https://raw.githubusercontent.com/saveriomiroddi/rpi_vpn_router/master/install_vpn_router.sh | sudo bash -`
 
-- follow the instructions
 - connect the ISP modem/router to the RPi internal ethernet port
-- plug the Ethernet dongle in the RPi
-- insert the card in the RPi and boot it
+- insert the SD card, and plug the ethernet dongle in the RPi, and boot it
 - log in the RPi and execute the additional instructions
 - connect the Wifi access point to the Ethernet dongle
 
