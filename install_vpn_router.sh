@@ -4,7 +4,8 @@ set -o errexit
 
 # GENERAL NOTES ################################################################
 
-# Temporary files/subdirs are deleted immediately after usage.
+# Temporary files/subdirs are deleted immediately after usage, with an
+# exception: if V_DONT_DELETE_IMAGE=1, then the image archive is not deleted.
 
 # VARIABLES/CONSTANTS ##########################################################
 
@@ -206,7 +207,7 @@ function burn_image {
     stdbuf -o0 awk -v RS='\r' "/copied/ { printf(\"%0.f\n\", \$1 / $uncompressed_image_size * 100) }" | \
     whiptail --gauge "Burning the image on the SD card..." 30 100 0
 
-  rm "$v_local_image_filename"
+  [[ "$V_DONT_DELETE_IMAGE" != 1 ]] && rm "$v_local_image_filename"
 }
 
 function mount_data_partition {
