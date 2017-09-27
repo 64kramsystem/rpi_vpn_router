@@ -16,7 +16,8 @@ c_data_dir_mountpoint=/mnt
 # There are no clean solutions in bash fo capturing multiple return values,
 # so for this case, globals are ok, esprcially considering that processing
 # is performed in a strictly linear fashion (no reassignments, etc.).
-v_temp_path=
+v_temp_path=       # use this only inside download_and_process_required_data()...
+v_project_path=    # ... and this for all the rest
 v_sdcard_device=
 v_rpi_static_ip_on_modem_net=
 v_rpi_hostname=
@@ -61,6 +62,12 @@ Leave blank for using the default (`/tmp`).' 30 100 3>&1 1>&2 2>&3)
 
   if [[ "$v_temp_path" == "" ]]; then
     v_temp_path="/tmp"
+  fi
+
+  if [[ "$REPO_BRANCH" ]]; then
+    v_project_path="$v_temp_path/rpi_vpn_router-$REPO_BRANCH"
+  else
+    v_project_path="$v_temp_path/rpi_vpn_router-master"
   fi
 }
 
@@ -172,16 +179,16 @@ function download_and_process_required_data {
    stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' | \
    whiptail --gauge "Downloading project archive..." 30 100 0
 
-  rm -rf "$v_temp_path/rpi_vpn_router-master"
+  rm -rf "$v_project_path"
 
   unzip "$project_archive_filename" -d "$v_temp_path"
 
   [[ "$DONT_DELETE_ARCHIVES" != 1 ]] && rm "$project_archive_filename"
 
   # The symlink is not included, but it doesn't have (meaningful) permissions.
-  find "$v_temp_path/rpi_vpn_router-master/configfiles" -type d -exec chmod 755 {} \;
-  find "$v_temp_path/rpi_vpn_router-master/configfiles" -type f -name '*.sh' -exec chmod 755 {} \;
-  find "$v_temp_path/rpi_vpn_router-master/configfiles" -type f -not -name '*.sh' -exec chmod 644 {} \;
+  find "$v_project_path/configfiles" -type d -exec chmod 755 {} \;
+  find "$v_project_path/configfiles" -type f -name '*.sh' -exec chmod 755 {} \;
+  find "$v_project_path/configfiles" -type f -not -name '*.sh' -exec chmod 644 {} \;
 }
 
 function unmount_sdcard_partitions {
