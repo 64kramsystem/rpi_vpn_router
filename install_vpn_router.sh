@@ -5,7 +5,7 @@ set -o errexit
 # GENERAL NOTES ################################################################
 
 # Temporary files/subdirs are deleted immediately after usage, with an
-# exception: if V_DONT_DELETE_OS_ARCHIVE=1, then the image archive is not deleted.
+# exception: if V_DONT_DELETE_ARCHIVES=1, then the archives are not deleted.
 
 # VARIABLES/CONSTANTS ##########################################################
 
@@ -164,7 +164,7 @@ function download_and_process_required_data {
 
   unzip "$os_archive_filename" -d "$v_temp_path"
 
-  [[ "$V_DONT_DELETE_OS_ARCHIVE" != 1 ]] && rm "$os_archive_filename"
+  [[ "$V_DONT_DELETE_ARCHIVES" != 1 ]] && rm "$os_archive_filename"
 
   local project_archive_filename="$v_temp_path/${c_project_archive_address##*/}"
 
@@ -174,15 +174,14 @@ function download_and_process_required_data {
 
   rm -rf "$v_temp_path/rpi_vpn_router-master"
 
-  unzip "$project_archive_filename" -d "$v_temp_path" -x "*/README.md" "*/install_vpn_router.sh" "*/processed_image_diff/*"
-  unzip "$project_archive_filename" -d "$v_temp_path" "*/processed_image_diff/*"
+  unzip "$project_archive_filename" -d "$v_temp_path"
 
-  rm "$project_archive_filename"
+  [[ "$V_DONT_DELETE_ARCHIVES" != 1 ]] && rm "$project_archive_filename"
 
   # The symlink is not included, but it doesn't have (meaningful) permissions.
-  find "$v_temp_path/rpi_vpn_router-master"/* -type d -exec chmod 755 {} \;
-  find "$v_temp_path/rpi_vpn_router-master"/* -type f -name '*.sh' -exec chmod 755 {} \;
-  find "$v_temp_path/rpi_vpn_router-master"/* -type f -not -name '*.sh' -exec chmod 644 {} \;
+  find "$v_temp_path/rpi_vpn_router-master/configfiles" -type d -exec chmod 755 {} \;
+  find "$v_temp_path/rpi_vpn_router-master/configfiles" -type f -name '*.sh' -exec chmod 755 {} \;
+  find "$v_temp_path/rpi_vpn_router-master/configfiles" -type f -not -name '*.sh' -exec chmod 644 {} \;
 }
 
 function unmount_sdcard_partitions {
@@ -239,15 +238,10 @@ function mount_data_partition {
   mount "${v_sdcard_device}2" "$c_data_dir_mountpoint"
 }
 
-function patch_system_with_packages {
+function copy_system_files {
   tar xvf "$v_temp_path/rpi_vpn_router-master/processed_image_diff/processed_image.tar.xz" -C "$c_data_dir_mountpoint"
 
-  rm -rf "$v_temp_path/rpi_vpn_router-master/processed_image_diff"
-}
-
-function copy_configuration_files {
-  # Files to ignore are not present, as they aren't extracted from the archive.
-  rsync --recursive --links --perms "$v_temp_path/rpi_vpn_router-master/" "$c_data_dir_mountpoint"
+  rsync --recursive --links --perms "$v_temp_path/rpi_vpn_router-master/configfiles/" "$c_data_dir_mountpoint"
 
   rm -rf "$v_temp_path/rpi_vpn_router-master"
 }
@@ -328,8 +322,7 @@ unmount_sdcard_partitions
 burn_image
 
 mount_data_partition
-patch_system_with_packages
-copy_configuration_files
+copy_system_files
 update_configuration_files
 eject_sdcard
 
