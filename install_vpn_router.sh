@@ -5,7 +5,7 @@ set -o errexit
 # GENERAL NOTES ################################################################
 
 # Temporary files/subdirs are deleted immediately after usage, with an
-# exception: if V_DONT_DELETE_ARCHIVES=1, then the archives are not deleted.
+# exception: if DONT_DELETE_ARCHIVES=1, then the archives are not deleted.
 
 # VARIABLES/CONSTANTS ##########################################################
 
@@ -164,7 +164,7 @@ function download_and_process_required_data {
 
   unzip "$os_archive_filename" -d "$v_temp_path"
 
-  [[ "$V_DONT_DELETE_ARCHIVES" != 1 ]] && rm "$os_archive_filename"
+  [[ "$DONT_DELETE_ARCHIVES" != 1 ]] && rm "$os_archive_filename"
 
   local project_archive_filename="$v_temp_path/${c_project_archive_address##*/}"
 
@@ -176,7 +176,7 @@ function download_and_process_required_data {
 
   unzip "$project_archive_filename" -d "$v_temp_path"
 
-  [[ "$V_DONT_DELETE_ARCHIVES" != 1 ]] && rm "$project_archive_filename"
+  [[ "$DONT_DELETE_ARCHIVES" != 1 ]] && rm "$project_archive_filename"
 
   # The symlink is not included, but it doesn't have (meaningful) permissions.
   find "$v_temp_path/rpi_vpn_router-master/configfiles" -type d -exec chmod 755 {} \;
