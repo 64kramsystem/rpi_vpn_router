@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is the first release of a script for setting up a Raspberri Pi (3) as VPN router, using the RPi Ubuntu.
+This is the first release of a script for setting up a Raspberri Pi (3) as VPN router, using Raspbian.
 
 This setup will yield a wireless network connected to Internet through the configured VPN; if the VPN connection falls for any reason, the internet connection will be unavailable until the VPN will be up again ("kill switch").
 
@@ -11,9 +11,9 @@ There are use cases where using a RPi as VPN router is very useful, for example,
 There are existing routers preconfigured with this functionality (WRT/Tomato), but:
 
 - they have very limited hardware (CPU/RAM/disk) - I doubt they're powerful enough to handle 20+ MBit/sec of traffic
-- they're not as easy to configure, use, and they has much less software available, compared to Ubuntu
+- they're not as easy to configure and use, and they has much less software available, compared to Debian-based distributions
 
-On an Ubuntu-based Raspberry Pi, you can trivially install for example, a local file hosting service, an FTP server, a backup server, or many other services, with great ease and availability of information.
+On an Raspbian Raspberry Pi, you can trivially install for example, a local file hosting service, an FTP server, a backup server, or many other services, with great ease and availability of information.
 
 ### Requirements
 
@@ -52,7 +52,6 @@ Simple configuration:
 
 - connect the ISP modem/router to the RPi internal ethernet port
 - insert the SD card, and plug the ethernet dongle in the RPi, and boot it
-- log in the RPi and execute the additional instructions
 - connect the Wifi access point to the Ethernet dongle
 
-Enjoy the RPI3 VPN router!
+Enjoy the RPi3 VPN router!
