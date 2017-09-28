@@ -16,7 +16,7 @@ c_data_dir_mountpoint=/mnt
 # There are no clean solutions in bash fo capturing multiple return values,
 # so for this case, globals are ok, esprcially considering that processing
 # is performed in a strictly linear fashion (no reassignments, etc.).
-v_temp_path=       # use this only inside download_and_process_required_data()...
+v_temp_path=       # use this only inside download_and_unpack_archives()...
 v_project_path=    # ... and this for all the rest
 v_sdcard_device=
 v_rpi_static_ip_on_modem_net=
@@ -173,7 +173,7 @@ Leave blank for using the default PIA DNS Server #2 (209.222.18.218)' 30 100 3>&
   done
 }
 
-function download_and_process_required_data {
+function download_and_unpack_archives {
   local os_archive_filename="$v_temp_path/${c_os_archive_address##*/}"
   v_os_image_filename="${os_archive_filename%.zip}.img"
 
@@ -196,7 +196,9 @@ function download_and_process_required_data {
   unzip "$project_archive_filename" -d "$v_temp_path"
 
   [[ "$DONT_DELETE_ARCHIVES" != 1 ]] && rm "$project_archive_filename"
+}
 
+function process_project_files {
   # The symlink is not included, but it doesn't have (meaningful) permissions.
   find "$v_project_path/configfiles" -type d -exec chmod 755 {} \;
   find "$v_project_path/configfiles" -type f -name '*.sh' -exec chmod 755 {} \;
@@ -335,7 +337,8 @@ ask_rpi_static_ip_on_modem_net
 ask_rpi_hostname
 ask_pia_data
 
-download_and_process_required_data
+download_and_unpack_archives
+process_project_files
 unmount_sdcard_partitions
 burn_image
 
