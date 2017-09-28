@@ -21,6 +21,7 @@ v_project_path=    # ... and this for all the rest
 v_sdcard_device=
 v_rpi_static_ip_on_modem_net=
 v_rpi_hostname=
+v_disable_on_board_wireless=
 v_pia_user=
 v_pia_password=
 v_pia_server=
@@ -129,6 +130,18 @@ function ask_rpi_hostname {
   v_rpi_hostname=$(whiptail --inputbox $'Enter the RPi hostname.
 
 Leave blank for using `raspberrypi`' 30 100 3>&1 1>&2 2>&3)
+}
+
+function ask_disable_on_board_wireless {
+  if (whiptail --yesno $'Disable on board wireless (WiFi/Bluetooth, on RPi3)?
+
+
+On RPi 3, it\'s advised to choose `Yes`, since the traffic will go through eth0; choosing `No` will yield a working VPN Router nonetheless.
+
+On other models, the choice won\'t have any effect.
+' 30 100); then
+    v_disable_on_board_wireless=1
+  fi
 }
 
 function ask_pia_data {
@@ -281,6 +294,12 @@ function update_configuration_files {
     echo "$v_rpi_hostname" > "$c_data_dir_mountpoint/etc/hostname"
   fi
 
+  # On-board Wireless blacklisting #########################
+
+  if [[ "$v_disable_on_board_wireless" != 1 ]]; then
+    rm "$c_data_dir_mountpoint/etc/modprobe.d/blacklist-rpi3-wireless.conf"
+  fi
+
   # Networking #############################################
 
   # If DHCP is used on the modem/router side, nothing needs
@@ -342,6 +361,7 @@ ask_temp_path
 ask_sdcard_device
 ask_rpi_static_ip_on_modem_net
 ask_rpi_hostname
+ask_disable_on_board_wireless
 ask_pia_data
 
 download_and_unpack_archives
