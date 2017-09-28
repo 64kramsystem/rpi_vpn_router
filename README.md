@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is the first release of a script for setting up a Raspberri Pi (3) as VPN router, using Raspbian.
+This is the first release of a script for setting up a Raspberri Pi as VPN router, using Raspbian.
 
 This setup will yield a wireless network connected to Internet through the configured VPN; if the VPN connection falls for any reason, the internet connection will be unavailable until the VPN will be up again ("kill switch").
 
@@ -20,7 +20,7 @@ On an Raspbian-based Raspberry Pi, you can trivially install for example, a loca
 The hardware requirements are:
 
 - the ISP modem/router
-- an RPi3
+- a Raspberry Pi
 - a USB Ethernet dongle
 - a Wifi access point
 
@@ -28,13 +28,13 @@ The software requirements are:
 
 - a PrivateInternetAccess account (or any other VPN provider, although in this case, additional configuration may be required)
 
-The procedure can be trivially adapted for any RPi and any VPN provider.
+The procedure can be trivially adapted for any VPN provider.
 
 I don't have any relation to PrivateInternetAccess, except that it's been the most reliable of all the VPN providers I've used. Of course, YMMV.
 
 ### Note on using RPi[s] as Wifi Access Point/Router
 
-This is **not** a guide for setting up the RPi as Wifi access point+router (for example, using an USB Wifi dongle, or the RPi3 built-in Wifi chip).
+This is **not** a guide for setting up the RPi as Wifi access point+router (for example, using an USB Wifi dongle, or the RPi3 built-in Wifi module).
 
 I have experience on several hardware setups (at least 5) with RPi in AP+router setup, and both the RPi integrated Wifi chip and USB Wifi dongles in general, are simply not cut for working as access point.
 
@@ -54,4 +54,4 @@ Simple configuration:
 - insert the SD card and plug the ethernet dongle to the RPi, then boot it;
 - connect the Wifi access point to the Ethernet dongle.
 
-Enjoy the RPi3 VPN router!
+Enjoy the RPi VPN router!
