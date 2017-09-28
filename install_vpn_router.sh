@@ -52,7 +52,19 @@ function check_sudo {
 }
 
 function print_intro {
-  whiptail --msgbox "Hello! This script will prepare an SDCard for using un a RPi3 as VPN router." 30 100
+  whiptail --msgbox "Hello! This script will prepare an SDCard for using un a RPi3 as VPN router.
+
+Please note that device events (eg. automount) are disabled during the script execution." 30 100
+}
+
+# udev has lots of potentional for causing a mess while operating with partitions,
+# images, etc., so we disable the events processing.
+function disable_udev_processing {
+  udevadm control --stop-exec-queue
+}
+
+function restore_udev_processing {
+  udevadm control --start-exec-queue
 }
 
 function ask_temp_path {
@@ -237,11 +249,6 @@ function mount_data_partition {
   # and cause the devices disconnection (!).
   sleep 1
 
-  # If the automount kicked in already (which is unlikely), unmount the partition.
-  if [[ $(mount | grep "^${v_sdcard_device}2") ]]; then
-    umount "${v_sdcard_device}2"
-  fi
-
   mount "${v_sdcard_device}2" "$c_data_dir_mountpoint"
 }
 
@@ -318,6 +325,10 @@ Enjoy your RPi3 VPN router!
 check_sudo
 
 print_intro
+
+disable_udev_processing
+trap restore_udev_processing EXIT
+
 ask_temp_path
 ask_sdcard_device
 ask_rpi_static_ip_on_modem_net
