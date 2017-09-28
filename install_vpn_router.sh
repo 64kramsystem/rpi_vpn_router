@@ -12,6 +12,8 @@ set -o errexit
 c_project_archive_address=https://github.com/saveriomiroddi/rpi_vpn_router/archive/master.zip
 c_os_archive_address=http://vx2-downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2017-09-08/2017-09-07-raspbian-stretch-lite.zip
 c_data_dir_mountpoint=/mnt
+c_data_partition_default_size=1806  # could be dynamically retrieved, but would
+                                    # disrupt the sequence
 
 # There are no clean solutions in bash fo capturing multiple return values,
 # so for this case, globals are ok, esprcially considering that processing
@@ -19,6 +21,7 @@ c_data_dir_mountpoint=/mnt
 v_temp_path=       # use this only inside download_and_unpack_archives()...
 v_project_path=    # ... and this for all the rest
 v_sdcard_device=
+v_data_partition_size=
 v_rpi_static_ip_on_modem_net=
 v_rpi_hostname=
 v_disable_on_board_wireless=
@@ -109,6 +112,22 @@ function ask_sdcard_device {
     fi
 
     unset v_usb_storage_devices
+  done
+}
+
+function ask_data_partition_size {
+  while true; do
+    v_data_partition_size=$(whiptail --inputbox "Enter the size of the data partition (in million bytes)
+
+The size must be numbers only, and greater than $c_data_partition_default_size.
+
+Leave blank for leaving the default size ($c_data_partition_default_size)." 30 100 3>&1 1>&2 2>&3)
+
+    if [[ "$v_data_partition_size" == "" ]]; then
+      break
+    elif [[ $v_data_partition_size =~ ^[0-9]+$ && "$v_data_partition_size" > "$c_data_partition_default_size" ]]; then
+      break
+    fi
   done
 }
 
@@ -209,6 +228,28 @@ function download_and_unpack_archives {
   unzip "$project_archive_filename" -d "$v_temp_path"
 
   [[ "$DONT_DELETE_ARCHIVES" != 1 ]] && rm "$project_archive_filename"
+}
+
+function resize_image_data_partition {
+  if [[ "$v_data_partition_size" != "" ]]; then
+    # Round to the next multiple of 512, if not a multiple already.
+    local size_increase_sectors=$(( (1000000 * ($v_data_partition_size - $c_data_partition_default_size) + 511) / 512 ))
+
+    (dd status=progress if=/dev/zero bs=512 count=$size_increase_sectors >> "$v_os_image_filename") 2>&1 | \
+      stdbuf -o0 awk -v RS='\r' "/copied/ { printf(\"%0.f\n\", \$1 / ($size_increase_sectors * 512) * 100) }" | \
+      whiptail --gauge "Appending empty space to the image data partition..." 30 100 0
+
+    local loop_device=$(losetup -f -P --show "$v_os_image_filename")
+    local start_of_second_partition=$(parted -m "$loop_device" print | awk -F: '/^2:/ {print $2}')
+
+    # Using 100% will avoid the annoying alignment problem.
+    parted "$loop_device" 'rm 2' "mkpart primary $start_of_second_partition 100%"
+
+    e2fsck -f "${loop_device}p2"
+    resize2fs "${loop_device}p2"
+
+    losetup -d "$loop_device"
+  fi
 }
 
 function process_project_files {
@@ -359,12 +400,14 @@ trap restore_udev_processing EXIT
 
 ask_temp_path
 ask_sdcard_device
+ask_data_partition_size
 ask_rpi_static_ip_on_modem_net
 ask_rpi_hostname
 ask_disable_on_board_wireless
 ask_pia_data
 
 download_and_unpack_archives
+resize_image_data_partition
 process_project_files
 unmount_sdcard_partitions
 burn_image
