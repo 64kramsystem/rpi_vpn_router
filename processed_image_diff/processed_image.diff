@@ -1,7 +1,11 @@
+deleting etc/init/ssh.override
+deleting etc/rc2.d/K01ssh
+deleting etc/rc3.d/K01ssh
+deleting etc/rc4.d/K01ssh
+deleting etc/rc5.d/K01ssh
 etc/dnsmasq.conf
 etc/ld.so.cache
 etc/libccid_Info.plist
-etc/localtime
 etc/passwd
 etc/passwd-
 etc/resolv.conf
@@ -33,15 +37,19 @@ etc/rc1.d/K01pcscd
 etc/rc2.d/S01dnsmasq
 etc/rc2.d/S01openvpn
 etc/rc2.d/S01pcscd
+etc/rc2.d/S01ssh
 etc/rc3.d/S01dnsmasq
 etc/rc3.d/S01openvpn
 etc/rc3.d/S01pcscd
+etc/rc3.d/S01ssh
 etc/rc4.d/S01dnsmasq
 etc/rc4.d/S01openvpn
 etc/rc4.d/S01pcscd
+etc/rc4.d/S01ssh
 etc/rc5.d/S01dnsmasq
 etc/rc5.d/S01openvpn
 etc/rc5.d/S01pcscd
+etc/rc5.d/S01ssh
 etc/rc6.d/K01dnsmasq
 etc/rc6.d/K01openvpn
 etc/rc6.d/K01pcscd
@@ -49,8 +57,10 @@ etc/reader.conf.d/
 etc/reader.conf.d/libccidtwin
 etc/resolvconf/update.d/
 etc/resolvconf/update.d/dnsmasq
+etc/systemd/system/sshd.service
 etc/systemd/system/multi-user.target.wants/dnsmasq.service
 etc/systemd/system/multi-user.target.wants/openvpn.service
+etc/systemd/system/multi-user.target.wants/ssh.service
 etc/systemd/system/sockets.target.wants/pcscd.socket
 lib/arm-linux-gnueabihf/liblzo2.so.2
 lib/arm-linux-gnueabihf/liblzo2.so.2.0.0
@@ -363,8 +373,6 @@ usr/share/openvpn/verify-cn
 usr/share/p11-kit/
 usr/share/p11-kit/modules/
 usr/share/p11-kit/modules/opensc-pkcs11.module
-var/cache/apt/pkgcache.bin
-var/cache/apt/srcpkgcache.bin
 var/cache/debconf/config.dat
 var/cache/debconf/config.dat-old
 var/cache/debconf/templates.dat
@@ -376,6 +384,11 @@ var/cache/man/fr.ISO8859-1/CACHEDIR.TAG
 var/cache/man/fr.UTF-8/CACHEDIR.TAG
 var/cache/man/fr/index.db
 var/lib/apt/extended_states
+var/lib/apt/lists/archive.raspberrypi.org_debian_dists_stretch_InRelease
+var/lib/apt/lists/archive.raspberrypi.org_debian_dists_stretch_main_binary-armhf_Packages
+var/lib/apt/lists/archive.raspberrypi.org_debian_dists_stretch_ui_binary-armhf_Packages
+var/lib/apt/lists/mirrordirector.raspbian.org_raspbian_dists_stretch_InRelease
+var/lib/apt/lists/mirrordirector.raspbian.org_raspbian_dists_stretch_main_binary-armhf_Packages
 var/lib/dpkg/status
 var/lib/dpkg/status-old
 var/lib/dpkg/info/dns-root-data.list
