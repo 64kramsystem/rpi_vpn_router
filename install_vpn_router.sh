@@ -9,7 +9,7 @@ set -o errexit
 
 # VARIABLES/CONSTANTS ##########################################################
 
-c_project_archive_address=https://github.com/saveriomiroddi/rpi_vpn_router/archive/master.zip
+c_project_archive_base_address=https://github.com/saveriomiroddi/rpi_vpn_router/archive
 c_os_archive_address=http://vx2-downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2017-09-08/2017-09-07-raspbian-stretch-lite.zip
 c_data_dir_mountpoint=/mnt
 c_data_partition_default_size=1806  # could be dynamically retrieved, but would
@@ -31,6 +31,12 @@ v_pia_server=
 v_pia_dns_server_1=
 v_pia_dns_server_2=
 v_os_image_filename=
+
+if [[ "$REPO_BRANCH" == "" ]]; then
+  v_repo_branch=master
+else
+  v_repo_branch="$REPO_BRANCH"
+fi
 
 # HELPERS ######################################################################
 
@@ -80,11 +86,7 @@ Leave blank for using the default (`/tmp`).' 30 100 3>&1 1>&2 2>&3)
     v_temp_path="/tmp"
   fi
 
-  if [[ "$REPO_BRANCH" ]]; then
-    v_project_path="$v_temp_path/rpi_vpn_router-$REPO_BRANCH"
-  else
-    v_project_path="$v_temp_path/rpi_vpn_router-master"
-  fi
+  v_project_path="$v_temp_path/rpi_vpn_router-$v_repo_branch"
 }
 
 function ask_sdcard_device {
@@ -217,9 +219,10 @@ function download_and_unpack_archives {
 
   [[ "$DONT_DELETE_ARCHIVES" != 1 ]] && rm "$os_archive_filename"
 
-  local project_archive_filename="$v_temp_path/${c_project_archive_address##*/}"
+  local project_archive_address="$c_project_archive_base_address/$v_repo_branch.zip"
+  local project_archive_filename="$v_project_path.zip"
 
-  wget -cO "$project_archive_filename" "$c_project_archive_address" 2>&1 | \
+  wget -cO "$project_archive_filename" "$project_archive_address" 2>&1 | \
    stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' | \
    whiptail --gauge "Downloading project archive..." 30 100 0
 
@@ -309,7 +312,7 @@ function mount_data_partition {
 }
 
 function copy_system_files {
-  tar xvf "$v_temp_path/rpi_vpn_router-master/processed_image_diff/processed_image.tar.xz" -C "$c_data_dir_mountpoint"
+  tar xvf "$v_project_path/processed_image_diff/processed_image.tar.xz" -C "$c_data_dir_mountpoint"
 
   # Delete files that can't be deleted by the tar operation.
   rm "$c_data_dir_mountpoint/etc/init/ssh.override"
@@ -318,9 +321,9 @@ function copy_system_files {
   rm "$c_data_dir_mountpoint/etc/rc4.d/K01ssh"
   rm "$c_data_dir_mountpoint/etc/rc5.d/K01ssh"
 
-  rsync --recursive --links --perms "$v_temp_path/rpi_vpn_router-master/configfiles/" "$c_data_dir_mountpoint"
+  rsync --recursive --links --perms "$v_project_path/configfiles/" "$c_data_dir_mountpoint"
 
-  rm -rf "$v_temp_path/rpi_vpn_router-master"
+  rm -rf "$v_project_path"
 }
 
 function update_configuration_files {
