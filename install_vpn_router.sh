@@ -383,12 +383,11 @@ function print_post_configuration_intructions {
 
 Now:
 
-- connect the ISP modem/router to the RPi internal ethernet port
-- insert the SD card, and plug the ethernet dongle in the RPi, and boot it
-- log in the RPi and execute the additional instructions
+- connect the ISP modem/router to the RPi internal ethernet port;
+- insert the SD card and plug the ethernet dongle to the RPi, then boot it;
 - connect the Wifi access point to the Ethernet dongle
 
-Enjoy your RPi3 VPN router!
+... now enjoy your RPi3 VPN router!
 " 30 100
 }
 
