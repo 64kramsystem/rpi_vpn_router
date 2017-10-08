@@ -5,27 +5,38 @@ set -o errexit
 # GENERAL NOTES ################################################################
 
 # Temporary files/subdirs are deleted immediately after usage, with an
-# exception: if V_DONT_DELETE_IMAGE=1, then the image archive is not deleted.
+# exception: if DONT_DELETE_ARCHIVES=1, then the archives are not deleted.
 
 # VARIABLES/CONSTANTS ##########################################################
 
-c_project_archive_address=https://github.com/saveriomiroddi/rpi_vpn_router/archive/master.zip
-c_ubuntu_image_address=https://www.finnie.org/software/raspberrypi/ubuntu-rpi3/ubuntu-16.04-preinstalled-server-armhf+raspi3.img.xz
+c_project_archive_base_address=https://github.com/saveriomiroddi/rpi_vpn_router/archive
+c_os_archive_address=http://vx2-downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2017-09-08/2017-09-07-raspbian-stretch-lite.zip
 c_data_dir_mountpoint=/mnt
+c_data_partition_default_size=1806  # could be dynamically retrieved, but would
+                                    # disrupt the sequence
 
 # There are no clean solutions in bash fo capturing multiple return values,
 # so for this case, globals are ok, esprcially considering that processing
 # is performed in a strictly linear fashion (no reassignments, etc.).
-v_temp_path=
+v_temp_path=       # use this only inside download_and_unpack_archives()...
+v_project_path=    # ... and this for all the rest
 v_sdcard_device=
+v_data_partition_size=
 v_rpi_static_ip_on_modem_net=
 v_rpi_hostname=
+v_disable_on_board_wireless=
 v_pia_user=
 v_pia_password=
 v_pia_server=
 v_pia_dns_server_1=
 v_pia_dns_server_2=
-v_local_image_filename=
+v_os_image_filename=
+
+if [[ "$REPO_BRANCH" == "" ]]; then
+  v_repo_branch=master
+else
+  v_repo_branch="$REPO_BRANCH"
+fi
 
 # HELPERS ######################################################################
 
@@ -51,17 +62,31 @@ function check_sudo {
 }
 
 function print_intro {
-  whiptail --msgbox "Hello! This script will prepare an SDCard for using un a RPi3 as VPN router." 30 100
+  whiptail --msgbox "Hello! This script will prepare an SDCard for using un a RPi3 as VPN router.
+
+Please note that device events (eg. automount) are disabled during the script execution." 30 100
+}
+
+# udev has lots of potentional for causing a mess while operating with partitions,
+# images, etc., so we disable the events processing.
+function disable_udev_processing {
+  udevadm control --stop-exec-queue
+}
+
+function restore_udev_processing {
+  udevadm control --start-exec-queue
 }
 
 function ask_temp_path {
-  v_temp_path=$(whiptail --inputbox 'Enter the temporary directory (requires about 255 MiB of free space).
+  v_temp_path=$(whiptail --inputbox 'Enter the temporary directory (requires about 2 GiB of free space).
 
 Leave blank for using the default (`/tmp`).' 30 100 3>&1 1>&2 2>&3)
 
   if [[ "$v_temp_path" == "" ]]; then
     v_temp_path="/tmp"
   fi
+
+  v_project_path="$v_temp_path/rpi_vpn_router-$v_repo_branch"
 }
 
 function ask_sdcard_device {
@@ -92,6 +117,22 @@ function ask_sdcard_device {
   done
 }
 
+function ask_data_partition_size {
+  while true; do
+    v_data_partition_size=$(whiptail --inputbox "Enter the size of the data partition (in million bytes)
+
+The size must be numbers only, and greater than $c_data_partition_default_size.
+
+Leave blank for leaving the default size ($c_data_partition_default_size)." 30 100 3>&1 1>&2 2>&3)
+
+    if [[ "$v_data_partition_size" == "" ]]; then
+      break
+    elif [[ $v_data_partition_size =~ ^[0-9]+$ && "$v_data_partition_size" > "$c_data_partition_default_size" ]]; then
+      break
+    fi
+  done
+}
+
 function ask_rpi_static_ip_on_modem_net {
   while true; do
     v_rpi_static_ip_on_modem_net=$(whiptail --inputbox $'Enter the RPi static IP on the modem network (eth0 on the RPi)
@@ -109,10 +150,18 @@ Leave blank for automatic assignment (use DHCP).' 30 100 3>&1 1>&2 2>&3)
 function ask_rpi_hostname {
   v_rpi_hostname=$(whiptail --inputbox $'Enter the RPi hostname.
 
-Leave blank for using `raspberrypi3`' 30 100 3>&1 1>&2 2>&3)
+Leave blank for using `raspberrypi`' 30 100 3>&1 1>&2 2>&3)
+}
 
-  if [[ "$v_rpi_hostname" == "" ]]; then
-    v_rpi_hostname=raspberrypi3
+function ask_disable_on_board_wireless {
+  if (whiptail --yesno $'Disable on board wireless (WiFi/Bluetooth, on RPi3)?
+
+
+On RPi 3, it\'s advised to choose `Yes`, since the traffic will go through eth0; choosing `No` will yield a working VPN Router nonetheless.
+
+On other models, the choice won\'t have any effect.
+' 30 100); then
+    v_disable_on_board_wireless=1
   fi
 }
 
@@ -158,28 +207,59 @@ Leave blank for using the default PIA DNS Server #2 (209.222.18.218)' 30 100 3>&
   done
 }
 
-function download_and_process_required_data {
-  v_local_image_filename="$v_temp_path/${c_ubuntu_image_address##*/}"
+function download_and_unpack_archives {
+  local os_archive_filename="$v_temp_path/${c_os_archive_address##*/}"
+  v_os_image_filename="${os_archive_filename%.zip}.img"
 
-  wget -cO "$v_local_image_filename" "$c_ubuntu_image_address" 2>&1 | \
+  wget -cO "$os_archive_filename" "$c_os_archive_address" 2>&1 | \
    stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' | \
-   whiptail --gauge "Downloading Ubuntu image..." 30 100 0
+   whiptail --gauge "Downloading O/S image..." 30 100 0
 
-  v_local_archive_filename="$v_temp_path/${c_project_archive_address##*/}"
+  unzip -o "$os_archive_filename" -d "$v_temp_path"
 
-  wget -cO "$v_local_archive_filename" "$c_project_archive_address" 2>&1 | \
+  [[ "$DONT_DELETE_ARCHIVES" != 1 ]] && rm "$os_archive_filename"
+
+  local project_archive_address="$c_project_archive_base_address/$v_repo_branch.zip"
+  local project_archive_filename="$v_project_path.zip"
+
+  wget -cO "$project_archive_filename" "$project_archive_address" 2>&1 | \
    stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' | \
    whiptail --gauge "Downloading project archive..." 30 100 0
 
-  rm -rf "$v_temp_path/rpi_vpn_router-master"
+  rm -rf "$v_project_path"
 
-  unzip "$v_local_archive_filename" -d "$v_temp_path" -x "*/README.md" "*/install_vpn_router.sh"
+  unzip "$project_archive_filename" -d "$v_temp_path"
 
-  rm "$v_local_archive_filename"
+  [[ "$DONT_DELETE_ARCHIVES" != 1 ]] && rm "$project_archive_filename"
+}
 
-  find "$v_temp_path/rpi_vpn_router-master"/* -type d -exec chmod 755 {} \;
-  find "$v_temp_path/rpi_vpn_router-master"/* -type f -name '*.sh' -exec chmod 755 {} \;
-  find "$v_temp_path/rpi_vpn_router-master"/* -type f -not -name '*.sh' -exec chmod 644 {} \;
+function resize_image_data_partition {
+  if [[ "$v_data_partition_size" != "" ]]; then
+    # Round to the next multiple of 512, if not a multiple already.
+    local size_increase_sectors=$(( (1000000 * ($v_data_partition_size - $c_data_partition_default_size) + 511) / 512 ))
+
+    (dd status=progress if=/dev/zero bs=512 count=$size_increase_sectors >> "$v_os_image_filename") 2>&1 | \
+      stdbuf -o0 awk -v RS='\r' "/copied/ { printf(\"%0.f\n\", \$1 / ($size_increase_sectors * 512) * 100) }" | \
+      whiptail --gauge "Appending empty space to the image data partition..." 30 100 0
+
+    local loop_device=$(losetup -f -P --show "$v_os_image_filename")
+    local start_of_second_partition=$(parted -m "$loop_device" print | awk -F: '/^2:/ {print $2}')
+
+    # Using 100% will avoid the annoying alignment problem.
+    parted "$loop_device" 'rm 2' "mkpart primary $start_of_second_partition 100%"
+
+    e2fsck -f "${loop_device}p2"
+    resize2fs "${loop_device}p2"
+
+    losetup -d "$loop_device"
+  fi
+}
+
+function process_project_files {
+  # The symlink is not included, but it doesn't have (meaningful) permissions.
+  find "$v_project_path/configfiles" -type d -exec chmod 755 {} \;
+  find "$v_project_path/configfiles" -type f -name '*.sh' -exec chmod 755 {} \;
+  find "$v_project_path/configfiles" -type f -not -name '*.sh' -exec chmod 644 {} \;
 }
 
 function unmount_sdcard_partitions {
@@ -206,16 +286,15 @@ function unmount_sdcard_partitions {
 }
 
 function burn_image {
+  local os_image_size=$(stat -c "%s" "$v_os_image_filename")
+
   # dd doesn't print newlines, so we need to detect the progress change events
   # using carriage return as separator
-  #
-  local uncompressed_image_size=$(xz --robot --list "$v_local_image_filename" | tail -n 1 | awk '{print $5}' )
-
-  (xzcat "$v_local_image_filename" | dd status=progress of="$v_sdcard_device") 2>&1 | \
-    stdbuf -o0 awk -v RS='\r' "/copied/ { printf(\"%0.f\n\", \$1 / $uncompressed_image_size * 100) }" | \
+  (dd status=progress if="$v_os_image_filename" of="$v_sdcard_device") 2>&1 | \
+    stdbuf -o0 awk -v RS='\r' "/copied/ { printf(\"%0.f\n\", \$1 / $os_image_size * 100) }" | \
     whiptail --gauge "Burning the image on the SD card..." 30 100 0
 
-  [[ "$V_DONT_DELETE_IMAGE" != 1 ]] && rm "$v_local_image_filename"
+  rm "$v_os_image_filename"
 }
 
 function mount_data_partition {
@@ -229,66 +308,87 @@ function mount_data_partition {
   # and cause the devices disconnection (!).
   sleep 1
 
-  # If the automount kicked in already (which is unlikely), unmount the partition.
-  if [[ $(mount | grep "^${v_sdcard_device}2") ]]; then
-    umount "${v_sdcard_device}2"
-  fi
-
   mount "${v_sdcard_device}2" "$c_data_dir_mountpoint"
 }
 
-function copy_configuration_files {
-  # Files to ignore are not present, as they aren't extracted from the archive.
-  rsync --recursive --links --perms "$v_temp_path/rpi_vpn_router-master/" "$c_data_dir_mountpoint"
+function copy_system_files {
+  tar xvf "$v_project_path/processed_image_diff/processed_image.tar.xz" -C "$c_data_dir_mountpoint"
 
-  rm -rf "$v_temp_path/rpi_vpn_router-master"
+  # Delete files that can't be deleted by the tar operation.
+  rm "$c_data_dir_mountpoint/etc/init/ssh.override"
+  rm "$c_data_dir_mountpoint/etc/rc2.d/K01ssh"
+  rm "$c_data_dir_mountpoint/etc/rc3.d/K01ssh"
+  rm "$c_data_dir_mountpoint/etc/rc4.d/K01ssh"
+  rm "$c_data_dir_mountpoint/etc/rc5.d/K01ssh"
+
+  rsync --recursive --links --perms --exclude .gitkeep "$v_project_path/configfiles/" "$c_data_dir_mountpoint"
+
+  rm -rf "$v_project_path"
 }
 
 function update_configuration_files {
-  # Setup the PIA configuration
+  # PIA configuration ######################################
   perl -i -pe "s/__PIA_USER__/$v_pia_user/" "$c_data_dir_mountpoint/etc/openvpn/pia/auth.conf"
   perl -i -pe "s/__PIA_PASSWORD__/$v_pia_password/" "$c_data_dir_mountpoint/etc/openvpn/pia/auth.conf"
   perl -i -pe "s/__PIA_SERVER_ADDRESS__/$v_pia_server/" "$c_data_dir_mountpoint/etc/openvpn/pia/default.ovpn"
 
-  # Fix the hosts file - the localhost name is currently missing from the image.
-  echo "127.0.0.1 $v_rpi_hostname" >> "$c_data_dir_mountpoint/etc/hosts"
-  echo "$v_rpi_hostname" > "$c_data_dir_mountpoint/etc/hostname"
-
-  if [[ "$v_rpi_static_ip_on_modem_net" == "" ]]; then
-    # Remove the eth0 section - rely on `/etc/network/interfaces.d/50-cloud.conf`, which
-    # sets `eth0` as auto (DHCP).
-    perl -0777 -i -pe 's/^auto eth0.*__MODEM_IP__\n\n//sm' "$c_data_dir_mountpoint/etc/network/interfaces"
-  else
-    # Otherwise set a static ip.
-    local modem_ip=$(perl -pe 's/\.\d+$/.1/' <<< "$v_rpi_static_ip_on_modem_net")
-    perl -i -pe "s/__MODEM_NET_RPI_IP__/$v_rpi_static_ip_on_modem_net/" "$c_data_dir_mountpoint/etc/network/interfaces"
-    perl -i -pe "s/__MODEM_IP__/$modem_ip/" "$c_data_dir_mountpoint/etc/network/interfaces"
+  # Hostname (if provided) #################################
+  if [[ "$v_rpi_hostname" != "" ]]; then
+    perl -i -pe "s/raspberrypi/$v_rpi_hostname/" "$c_data_dir_mountpoint/etc/hosts"
+    echo "$v_rpi_hostname" > "$c_data_dir_mountpoint/etc/hostname"
   fi
+
+  # On-board Wireless blacklisting #########################
+
+  if [[ "$v_disable_on_board_wireless" != 1 ]]; then
+    rm "$c_data_dir_mountpoint/etc/modprobe.d/blacklist-rpi3-wireless.conf"
+  fi
+
+  # Networking #############################################
+
+  # If DHCP is used on the modem/router side, nothing needs
+  # to be added.
+  if [[ "$v_rpi_static_ip_on_modem_net" != "" ]]; then
+    local modem_ip=$(perl -pe 's/\.\d+$/.1/' <<< "$v_rpi_static_ip_on_modem_net")
+
+    # Tabs are at risk to be autoconverted to spaces while editing,
+    # so it's better not to use `<<-`.
+    cat >> "$c_data_dir_mountpoint/etc/dhcpcd.conf" <<EOS
+interface eth0
+static ip_address=$v_rpi_static_ip_on_modem_net/24
+static routers=$modem_ip
+static domain_name_servers=$v_pia_dns_server_1 $v_pia_dns_server_2
+
+EOS
+  fi
+
+  cat >> "$c_data_dir_mountpoint/etc/dhcpcd.conf" <<EOS
+interface eth1
+static ip_address=192.168.166.1/24
+
+EOS
+
+  # DHCP Server ############################################
 
   perl -i -pe "s/__PIA_DNS_SERVER_1__/$v_pia_dns_server_1/" "$c_data_dir_mountpoint/etc/dnsmasq.d/eth1-access-point-net.conf"
   perl -i -pe "s/__PIA_DNS_SERVER_2__/$v_pia_dns_server_2/" "$c_data_dir_mountpoint/etc/dnsmasq.d/eth1-access-point-net.conf"
-
-  # Disable the automatic update, due to a critical bug in the distro.
-  # See https://bugs.launchpad.net/ubuntu-pi-flavour-maker/+bug/1697637
-  #
-  perl -i -pe 's/"1"/"0"/' "$c_data_dir_mountpoint/etc/apt/apt.conf.d/20auto-upgrades"
 }
 
 function eject_sdcard {
   eject "$v_sdcard_device"
 }
 
-function print_first_boot_instructions {
+function print_post_configuration_intructions {
   whiptail --msgbox "The SD card is ready.
 
-Insert it in the RPi, then execute:
+Now:
 
-    sudo apt update
-    sudo apt install -y openvpn dnsmasq
-    sudo systemctl enable vpn-router
-    sudo reboot
+- connect the ISP modem/router to the RPi internal ethernet port
+- insert the SD card, and plug the ethernet dongle in the RPi, and boot it
+- log in the RPi and execute the additional instructions
+- connect the Wifi access point to the Ethernet dongle
 
-Enjoy your RPI3 VPN router!
+Enjoy your RPi3 VPN router!
 " 30 100
 }
 
@@ -297,19 +397,27 @@ Enjoy your RPI3 VPN router!
 check_sudo
 
 print_intro
+
+disable_udev_processing
+trap restore_udev_processing EXIT
+
 ask_temp_path
 ask_sdcard_device
+ask_data_partition_size
 ask_rpi_static_ip_on_modem_net
 ask_rpi_hostname
+ask_disable_on_board_wireless
 ask_pia_data
 
-download_and_process_required_data
+download_and_unpack_archives
+resize_image_data_partition
+process_project_files
 unmount_sdcard_partitions
 burn_image
 
 mount_data_partition
-copy_configuration_files
+copy_system_files
 update_configuration_files
 eject_sdcard
 
-print_first_boot_instructions
+print_post_configuration_intructions
