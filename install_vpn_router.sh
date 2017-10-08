@@ -321,7 +321,7 @@ function copy_system_files {
   rm "$c_data_dir_mountpoint/etc/rc4.d/K01ssh"
   rm "$c_data_dir_mountpoint/etc/rc5.d/K01ssh"
 
-  rsync --recursive --links --perms "$v_project_path/configfiles/" "$c_data_dir_mountpoint"
+  rsync --recursive --links --perms --exclude .gitkeep "$v_project_path/configfiles/" "$c_data_dir_mountpoint"
 
   rm -rf "$v_project_path"
 }
