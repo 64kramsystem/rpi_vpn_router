@@ -2,11 +2,11 @@
 
 ## Introduction
 
-This is the first release of a script for setting up a Raspberri Pi as VPN router, using Raspbian.
+This is the first release of an application for setting up a Raspberri Pi as VPN router.
 
 This setup will yield a wireless network connected to Internet through the configured VPN; if the VPN connection falls for any reason, the internet connection will be unavailable until the VPN will be up again ("kill switch").
 
-There are use cases where using a RPi as VPN router is very useful, for example, when offering an internet connection to tenants, or more generally, to clients of a business.
+There are use cases where using a RPi as VPN router is very useful, in particular, when offering an internet connection in a commercial context/location, or even at home.
 
 There are existing routers preconfigured with this functionality (WRT/Tomato), but:
 
@@ -15,32 +15,36 @@ There are existing routers preconfigured with this functionality (WRT/Tomato), b
 
 On an Raspbian-based Raspberry Pi, you can trivially install for example, a local file hosting service, an FTP server, a backup server, or many other services, with great ease and availability of information.
 
-### Requirements
+### Screenshots
 
-The hardware requirements are:
+![USB Devices menu](/screenshots/02_usb_device_menu.png?raw=true)
+![Downloading Raspbian](/screenshots/03_download_raspbian.png?raw=true)
+![Completed](/screenshots/04_completed.png?raw=true)
+
+## Requirements
+
+Knowledge:
+
+- in the most basic functional form, only the VPN details are required
+- the access point may need to be configured (or not, depending on the model); if it does, you will need to be able to open the administrative interface, and specify that DHCP must be used for the IP configuration
+
+Hardware:
 
 - the ISP modem/router
-- a Raspberry Pi
+- a Raspberry Pi (any version supported by Raspbian)
 - a USB Ethernet dongle
 - a Wifi access point
 
-The software requirements are:
+Software/Services:
 
-- a PrivateInternetAccess account (or any other VPN provider, although in this case, additional configuration may be required)
+- VPN connection: you'll need a PrivateInternetAccess account (or any other VPN provider)
+- host O/S: you can execute this application on any reasonably recent Ubuntu/Debian-based distro (it's been tested on an Ubuntu 16.04)
 
-The procedure can be trivially adapted for any VPN provider.
+For other VPN providers, the procedure needs to be adapted; open a GitHub issue with the details, and I'll update the project.
 
 I don't have any relation to PrivateInternetAccess, except that it's been the most reliable of all the VPN providers I've used. Of course, YMMV.
 
-### Note on using RPi[s] as Wifi Access Point/Router
-
-This is **not** a guide for setting up the RPi as Wifi access point+router (for example, using an USB Wifi dongle, or the RPi3 built-in Wifi module).
-
-I have experience on several hardware setups (at least 5) with RPi in AP+router setup, and both the RPi integrated Wifi chip and USB Wifi dongles in general, are simply not cut for working as access point.
-
-For reference, almost all the "it works!" configurations published on the internet, are written by people who didn't bother testing them for more than a few minutes. I did use those setups for weeks, and my current configuration is permanent.
-
-I will elaborate on this subject further in the future.
+See the [specific wiki page](wiki/Using-RPi%5Bs%5D-as-Wifi-Access-Point-Router) for notes about using RPi in a single-device access point+router setup.
 
 ## Execution
 
@@ -52,6 +56,8 @@ Simple configuration:
 
 - connect the ISP modem/router to the RPi internal ethernet port;
 - insert the SD card and plug the ethernet dongle to the RPi, then boot it;
-- connect the Wifi access point to the Ethernet dongle.
+- connect the Wifi access point to the Ethernet dongle
 
-Enjoy the RPi VPN router!
+... now enjoy the RPi VPN router!
+
+The credentials are the standard Raspbian [user: pi, password: raspberry].
