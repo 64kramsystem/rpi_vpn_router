@@ -1,0 +1,8 @@
+# Yield a consistent sequence across time.
+# The `missingok` parameter is for safety.
+/var/log/router/*.log {
+  weekly
+  missingok
+  rotate 4
+  compress
+}
