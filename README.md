@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is the first release of an application for setting up a Raspberri Pi as VPN router.
+Raspberry Pi VPN Router Setup is a shell program for setting up a Raspberri Pi as VPN router.
 
 This setup will yield a wireless network connected to Internet through the configured VPN; if the VPN connection falls for any reason, the internet connection will be unavailable until the VPN will be up again ("kill switch").
 
@@ -14,6 +14,14 @@ There are existing routers preconfigured with this functionality (WRT/Tomato), b
 - they're not as easy to configure and use, and they has much less software available, compared to Debian-based distributions
 
 On an Raspbian-based Raspberry Pi, you can trivially install for example, a local file hosting service, an FTP server, a backup server, or many other services, with great ease and availability of information.
+
+### Status
+
+This project solved a very specific project of mine, so it's completed.
+
+If anybody required support for another VPN provider, I'll be happy to work on it - just open an issue.
+
+Since I have in plan to move to an RK3399-based board, I will also add support for it once I'll have it.
 
 ### Screenshots
 
