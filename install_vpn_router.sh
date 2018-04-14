@@ -259,6 +259,7 @@ function process_project_files {
   # The symlink is not included, but it doesn't have (meaningful) permissions.
   find "$v_project_path/configfiles" -type d -exec chmod 755 {} \;
   find "$v_project_path/configfiles" -type f -name '*.sh' -exec chmod 755 {} \;
+  find "$v_project_path/configfiles/etc/cron.d" -type f -exec chmod 600 {} \;
   find "$v_project_path/configfiles" -type f -not -name '*.sh' -exec chmod 644 {} \;
 }
 
