@@ -42,7 +42,8 @@ fi
 
 function find_usb_storage_devices {
   for device in /sys/block/*; do
-    local usb_storages_info=$(udevadm info --query=property --path=$device)
+    local usb_storages_info
+    usb_storages_info=$(udevadm info --query=property --path="$device")
 
     if echo "$usb_storages_info" | grep -q ^ID_BUS=usb; then
       devname=$(echo "$usb_storages_info" | grep ^DEVNAME= | perl -pe 's/DEVNAME=//')
@@ -95,17 +96,17 @@ function ask_sdcard_device {
 
     find_usb_storage_devices
 
-    if [[ ${#v_usb_storage_devices[@]} > 0 ]]; then
+    if [[ ${#v_usb_storage_devices[@]} -gt 0 ]]; then
       local entries_option=""
       local entries_count=0
       local message=$'Choose SDCard device. THE CARD/DEVICE WILL BE COMPLETELY ERASED.\n\nAvailable (USB) devices:\n\n'
 
       for dev in "${!v_usb_storage_devices[@]}"; do
         entries_option+=" $dev "
-        entries_option+=$(printf "%q" ${v_usb_storage_devices[$dev]})
+        entries_option+=$(printf "%q" "${v_usb_storage_devices[$dev]}")
         entries_option+=" OFF"
 
-        let entries_count+=1
+        entries_count=$((entries_count + 1))
       done
 
       v_sdcard_device=$(whiptail --radiolist "$message" 30 100 $entries_count $entries_option 3>&1 1>&2 2>&3);
@@ -236,14 +237,17 @@ function download_and_unpack_archives {
 function resize_image_data_partition {
   if [[ "$v_data_partition_size" != "" ]]; then
     # Round to the next multiple of 512, if not a multiple already.
-    local size_increase_sectors=$(( (1000000 * ($v_data_partition_size - $c_data_partition_default_size) + 511) / 512 ))
+    local size_increase_sectors
+    size_increase_sectors=$(( (1000000 * (v_data_partition_size - c_data_partition_default_size) + 511) / 512 ))
 
     (dd status=progress if=/dev/zero bs=512 count=$size_increase_sectors >> "$v_os_image_filename") 2>&1 | \
-      stdbuf -o0 awk -v RS='\r' "/copied/ { printf(\"%0.f\n\", \$1 / ($size_increase_sectors * 512) * 100) }" | \
+      stdbuf -o0 awk -v RS='\r' "/copied/ { printf(\"%0.f\\n\", \$1 / ($size_increase_sectors * 512) * 100) }" | \
       whiptail --gauge "Appending empty space to the image data partition..." 30 100 0
 
-    local loop_device=$(losetup -f -P --show "$v_os_image_filename")
-    local start_of_second_partition=$(parted -m "$loop_device" print | awk -F: '/^2:/ {print $2}')
+    local loop_device
+    local start_of_second_partition
+    loop_device=$(losetup -f -P --show "$v_os_image_filename")
+    start_of_second_partition=$(parted -m "$loop_device" print | awk -F: '/^2:/ {print $2}')
 
     # Using 100% will avoid the annoying alignment problem.
     parted "$loop_device" 'rm 2' "mkpart primary $start_of_second_partition 100%"
@@ -271,18 +275,19 @@ function process_project_files {
 }
 
 function unmount_sdcard_partitions {
-  if [[ $(mount | grep "^$v_sdcard_device") ]]; then
-    for partition in $(mount | grep ^$v_sdcard_device | awk '{print $1}'); do
+  if mount | grep -q "^$v_sdcard_device"; then
+    for partition in $(mount | grep "^$v_sdcard_device" | awk '{print $1}'); do
       umount "$partition" 2> /dev/null || true
     done
   fi
 
-  while [[ $(mount | grep "^$v_sdcard_device") ]]; do
+  while mount | grep -q "^$v_sdcard_device"; do
     local message=$'There are still some partitions mounted in the sdcard device that couldn\'t be unmounted:\n\n'
 
     while IFS=$'\n' read -r partition_data; do
-      echo $partition_data
-      local partition_description=$(echo $partition_data | awk '{print $1 " " $2 " " $3}')
+      echo "$partition_data"
+      local partition_description
+      partition_description=$(echo "$partition_data" | awk '{print $1 " " $2 " " $3}')
       message+="$partition_description
 "
     done <<< "$(mount | grep "^$v_sdcard_device")"
@@ -294,12 +299,13 @@ function unmount_sdcard_partitions {
 }
 
 function burn_image {
-  local os_image_size=$(stat -c "%s" "$v_os_image_filename")
+  local os_image_size
+  os_image_size=$(stat -c "%s" "$v_os_image_filename")
 
   # dd doesn't print newlines, so we need to detect the progress change events
   # using carriage return as separator
   (dd status=progress if="$v_os_image_filename" of="$v_sdcard_device") 2>&1 | \
-    stdbuf -o0 awk -v RS='\r' "/copied/ { printf(\"%0.f\n\", \$1 / $os_image_size * 100) }" | \
+    stdbuf -o0 awk -v RS='\r' "/copied/ { printf(\"%0.f\\n\", \$1 / $os_image_size * 100) }" | \
     whiptail --gauge "Burning the image on the SD card..." 30 100 0
 
   rm "$v_os_image_filename"
@@ -357,7 +363,8 @@ function update_configuration_files {
   # If DHCP is used on the modem/router side, nothing needs
   # to be added.
   if [[ "$v_rpi_static_ip_on_modem_net" != "" ]]; then
-    local modem_ip=$(perl -pe 's/\.\d+$/.1/' <<< "$v_rpi_static_ip_on_modem_net")
+    local modem_ip
+    modem_ip=$(perl -pe 's/\.\d+$/.1/' <<< "$v_rpi_static_ip_on_modem_net")
 
     # Tabs are at risk to be autoconverted to spaces while editing,
     # so it's better not to use `<<-`.
