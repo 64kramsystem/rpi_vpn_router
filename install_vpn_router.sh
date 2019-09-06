@@ -270,8 +270,9 @@ function process_project_files {
        -not -path "$v_project_path/configfiles/etc/cron.d/*" \
        -exec chmod 644 {} \;
 
-  # `cron.d` files will log a warning if they're not 600.
+  # Files used by services that raise warnings if they don't have specific permissions.
   find "$v_project_path/configfiles/etc/cron.d" -type f -exec chmod 600 {} \;
+  chmod 600 "$v_project_path/configfiles/etc/openvpn/pia/auth.conf"
 }
 
 function unmount_sdcard_partitions {
