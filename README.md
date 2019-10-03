@@ -17,11 +17,12 @@ On an Raspbian-based Raspberry Pi, you can trivially install for example, a loca
 
 ### Status
 
-This project solved a very specific project of mine, so it's completed.
+This project is now archived, since:
 
-If anybody required support for another VPN provider, I'll be happy to work on it - just open an issue.
+- I find it very useful, but it got no traction;
+- I now own a different SBC server, and I use a different procedure to setup the VPN Router configuration (although the configuration itself is the same).
 
-Since I have in plan to move to an RK3399-based board, I will also add support for it once I'll have it.
+The project has also been an exercise in shell scripting. Although the quality is competent, nowadays I'm more knowledgeable in shell scripting, therefore, I consider some sports in this project suboptimal; the [ZFS installer](https://github.com/saveriomiroddi/zfs-installer) is better.
 
 ### Screenshots
 
